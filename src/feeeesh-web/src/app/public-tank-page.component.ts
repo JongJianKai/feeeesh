@@ -8,55 +8,103 @@ import { TankScene } from './tank-scene';
   standalone: true,
   imports: [RouterLink],
   template: `
-    <div class="shell">
-      <header class="top">
-        <a routerLink="/" class="brand">Feeeesh</a>
-        <p class="tag">Visiting /t/{{ slug }}</p>
-        @if (tank(); as t) {
-          <p class="tag">{{ t.occupied }}/{{ t.capacity }} fish swimming</p>
-        }
-      </header>
-      <div #viewport class="viewport"></div>
-      @if (error()) {
-        <p class="err">{{ error() }}</p>
-      }
-      <p class="hint"><a routerLink="/">Make your own tank</a></p>
+    <div class="fe-visit">
+      <div #viewport class="fe-visit__tank" aria-label="Public Feeeesh tank"></div>
+
+      <div class="fe-visit__chrome">
+        <header class="fe-visit__top">
+          <a routerLink="/" class="fe-wordmark fe-wordmark--tilt" aria-label="Feeeesh">
+            F<span class="fe-wordmark__accent">eee</span>sh
+          </a>
+          <div class="fe-status-chip">
+            <span>Visiting /t/{{ slug }}</span>
+            @if (tank(); as t) {
+              <span>{{ t.occupied }}/{{ t.capacity }} fish</span>
+            }
+          </div>
+        </header>
+
+        <div class="fe-visit__bottom">
+          @if (error()) {
+            <p class="fe-toast fe-toast--error">{{ error() }}</p>
+          }
+          <div class="fe-visit__actions">
+            <button type="button" class="fe-share" (click)="copyLink()">
+              {{ copied() ? 'Link copied' : 'Copy link' }}
+            </button>
+            <a routerLink="/" class="fe-pill fe-pill--ghost fe-visit__own">Make your own tank</a>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [
     `
-      .shell {
+      .fe-visit {
+        position: relative;
         min-height: 100vh;
-        display: grid;
-        grid-template-rows: auto 1fr auto;
-        background: linear-gradient(180deg, #071820, #0b2a3a 50%, #0a1f2b);
-        color: #e8f4f8;
-        font-family: 'Segoe UI', 'Trebuchet MS', sans-serif;
+        overflow: hidden;
       }
-      .top {
-        padding: 1.25rem 1.5rem;
+      .fe-visit__tank {
+        position: absolute;
+        inset: 0;
       }
-      .brand {
-        font-size: 2.4rem;
-        font-weight: 800;
-        color: #f4fbff;
+      .fe-visit__tank canvas {
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
+      }
+      .fe-visit__chrome {
+        position: relative;
+        z-index: 2;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 100vh;
+        padding: 1.25rem 1.5rem 1.5rem;
+      }
+      .fe-visit__chrome a,
+      .fe-visit__chrome button,
+      .fe-visit__chrome .fe-status-chip,
+      .fe-visit__chrome .fe-toast {
+        pointer-events: auto;
+      }
+      .fe-visit__top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .fe-visit__top .fe-wordmark {
         text-decoration: none;
       }
-      .tag {
-        margin: 0.25rem 0 0;
-        opacity: 0.85;
+      .fe-visit__bottom {
+        display: grid;
+        gap: 0.75rem;
       }
-      .viewport {
-        width: min(1200px, 100%);
-        margin: 0 auto;
-        min-height: 480px;
+      .fe-visit__actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
       }
-      .err,
-      .hint {
-        padding: 1rem 1.5rem;
+      .fe-visit__own {
+        text-decoration: none;
       }
-      .hint a {
-        color: #9be7ff;
+      .fe-toast {
+        margin: 0;
+        max-width: max-content;
+        padding: 0.45rem 0.85rem;
+        border-radius: var(--fe-radius-pill);
+        background: var(--fe-glass);
+        border: 1px solid var(--fe-glass-border);
+        color: var(--fe-muted);
+        font: 600 0.85rem/1.3 var(--fe-font-ui);
+      }
+      .fe-toast--error {
+        color: #ffb4a8;
       }
     `
   ]
@@ -69,7 +117,9 @@ export class PublicTankPageComponent implements OnInit, OnDestroy {
   slug = '';
   tank = signal<TankDto | null>(null);
   error = signal<string | null>(null);
+  copied = signal(false);
   private scene?: TankScene;
+  private copyTimer?: ReturnType<typeof setTimeout>;
 
   async ngOnInit() {
     this.slug = this.route.snapshot.paramMap.get('slug') ?? '';
@@ -78,12 +128,26 @@ export class PublicTankPageComponent implements OnInit, OnDestroy {
       const tank = await this.api.publicTank(this.slug);
       this.tank.set(tank);
       this.scene.setFish(tank.fish);
+      queueMicrotask(() => window.dispatchEvent(new Event('resize')));
     } catch {
       this.error.set('Tank not found.');
     }
   }
 
   ngOnDestroy() {
+    if (this.copyTimer) clearTimeout(this.copyTimer);
     this.scene?.dispose();
+  }
+
+  async copyLink() {
+    const url = `${location.origin}/t/${this.slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      this.copied.set(true);
+      if (this.copyTimer) clearTimeout(this.copyTimer);
+      this.copyTimer = setTimeout(() => this.copied.set(false), 1800);
+    } catch {
+      this.error.set(url);
+    }
   }
 }
