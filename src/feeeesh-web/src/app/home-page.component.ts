@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, MeDto } from './api.service';
 import { TankScene } from './tank-scene';
 
-type PrimaryKind = 'daily' | 'cast' | 'tend';
+type Screen = 'splash' | 'lobby' | 'tank';
 
 @Component({
   selector: 'app-home-page',
@@ -14,44 +14,38 @@ type PrimaryKind = 'daily' | 'cast' | 'tend';
 })
 export class HomePageComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
-  @ViewChild('viewport', { static: true }) viewport!: ElementRef<HTMLDivElement>;
+  @ViewChild('viewport') viewport?: ElementRef<HTMLDivElement>;
 
   me = signal<MeDto | null>(null);
   status = signal<string | null>(null);
   error = signal<string | null>(null);
   busy = signal(false);
-  showSplash = signal(true);
+  screen = signal<Screen>('splash');
   splashProgress = signal(8);
   splashLabel = signal('Warming the tank…');
   shareCopied = signal(false);
+  showMore = false;
+  showAuth = false;
 
   email = '';
   password = '';
   vanity = '';
-  showAuth = false;
-  showMore = false;
 
   private scene?: TankScene;
   private splashTimer?: ReturnType<typeof setInterval>;
   private shareTimer?: ReturnType<typeof setTimeout>;
   private bootStarted = 0;
 
-  primaryAction = computed(() => {
+  summonLabel = computed(() => {
     const m = this.me();
-    if (!m) return null;
-    if (this.needsUrgentTend(m)) {
-      return { kind: 'tend' as PrimaryKind, label: 'Tend tank', pulse: true };
-    }
-    if (m.dailyClaimAvailable) {
-      return { kind: 'daily' as PrimaryKind, label: 'Daily roll', pulse: true };
-    }
-    return { kind: 'cast' as PrimaryKind, label: 'Cast (15 Pearls)', pulse: false };
+    if (!m) return 'Summon Fish';
+    if (m.dailyClaimAvailable) return 'Summon Fish · Daily';
+    return 'Summon Fish · 15 Pearls';
   });
 
   async ngOnInit() {
     this.bootStarted = performance.now();
     this.beginSplash();
-
     try {
       let me: MeDto;
       try {
@@ -61,9 +55,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
         me = auth.me;
       }
       this.me.set(me);
-      this.status.set('Your tank is live');
-      this.scene = new TankScene(this.viewport.nativeElement);
-      this.scene.setFish(me.tank.fish);
+      this.status.set('Your tank is ready');
       this.splashProgress.set(100);
       this.splashLabel.set('Ready');
       await this.finishSplash();
@@ -71,7 +63,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
       this.error.set(e?.message ?? 'Failed to start. Is the API running on :5071?');
       this.status.set('Could not start');
       this.splashLabel.set('Still waiting…');
-      this.showSplash.set(false);
+      this.screen.set('lobby');
     }
   }
 
@@ -96,55 +88,56 @@ export class HomePageComponent implements OnInit, OnDestroy {
       this.splashTimer = undefined;
     }
     const elapsed = performance.now() - this.bootStarted;
-    // Keep splash visible briefly so the wordmark + load bar can read.
-    const wait = Math.max(0, 1400 - elapsed);
+    const wait = Math.max(0, 1600 - elapsed);
     if (wait) await new Promise((r) => setTimeout(r, wait));
-    this.showSplash.set(false);
-    // Tank was created while splash covered the viewport — ensure correct size.
-    queueMicrotask(() => window.dispatchEvent(new Event('resize')));
+    this.screen.set('lobby');
   }
 
-  private needsUrgentTend(m: MeDto) {
-    return m.tank.fish.some((f) => f.inTank && (f.care === 'NeedsCare' || f.care === 'Down'));
+  async openTank() {
+    this.screen.set('tank');
+    this.error.set(null);
+    // wait for viewport to mount
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const host = this.viewport?.nativeElement;
+    if (!host) return;
+    if (!this.scene) {
+      this.scene = new TankScene(host);
+    }
+    const me = this.me();
+    if (me) await this.scene.setFish(me.tank.fish);
+    this.scene.resize();
+    this.status.set('Watching your tank');
+  }
+
+  backToLobby() {
+    this.screen.set('lobby');
+    // keep scene alive but hidden host may be destroyed — dispose and recreate next open
+    this.scene?.dispose();
+    this.scene = undefined;
   }
 
   private applyMe(me: MeDto) {
     this.me.set(me);
-    this.scene?.setFish(me.tank.fish);
+    void this.scene?.setFish(me.tank.fish);
     this.error.set(null);
   }
 
-  async runPrimary() {
-    const action = this.primaryAction();
-    if (!action) return;
-    if (action.kind === 'daily') return this.daily();
-    if (action.kind === 'cast') return this.cast();
-    return this.tend();
-  }
-
-  async daily() {
+  async summon() {
+    const m = this.me();
+    if (!m) return;
     this.busy.set(true);
     try {
-      const r = await this.api.daily();
-      this.status.set(`Daily catch: ${r.fish.speciesName} (${r.fish.rarity})`);
+      if (m.dailyClaimAvailable) {
+        const r = await this.api.daily();
+        this.status.set(`Summoned ${r.fish.speciesName} (${r.fish.rarity})`);
+      } else {
+        const r = await this.api.cast();
+        this.status.set(`Cast: ${r.fish.speciesName} (${r.fish.rarity})`);
+      }
       const me = await this.api.me();
       this.applyMe(me);
     } catch (e: any) {
-      this.error.set(e?.error?.error ?? e?.message ?? 'Daily failed');
-    } finally {
-      this.busy.set(false);
-    }
-  }
-
-  async cast() {
-    this.busy.set(true);
-    try {
-      const r = await this.api.cast();
-      this.status.set(`Cast: ${r.fish.speciesName} (${r.fish.rarity})`);
-      const me = await this.api.me();
-      this.applyMe(me);
-    } catch (e: any) {
-      this.error.set(e?.error?.error ?? e?.message ?? 'Cast failed');
+      this.error.set(e?.error?.error ?? e?.message ?? 'Summon failed');
     } finally {
       this.busy.set(false);
     }
