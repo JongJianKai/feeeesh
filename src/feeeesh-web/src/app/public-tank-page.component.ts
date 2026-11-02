@@ -44,6 +44,7 @@ import { TankScene } from './tank-scene';
         position: relative;
         min-height: 100vh;
         overflow: hidden;
+        background: #07262f;
       }
       .fe-visit__tank {
         position: absolute;
@@ -127,8 +128,8 @@ export class PublicTankPageComponent implements OnInit, OnDestroy {
     try {
       const tank = await this.api.publicTank(this.slug);
       this.tank.set(tank);
-      this.scene.setFish(tank.fish);
-      queueMicrotask(() => window.dispatchEvent(new Event('resize')));
+      await this.scene.setFish(tank.fish);
+      this.scene.resize();
     } catch {
       this.error.set('Tank not found.');
     }

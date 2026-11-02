@@ -1,4 +1,4 @@
-@if (showSplash()) {
+@if (screen() === 'splash') {
   <div class="fe-splash" role="status" aria-live="polite">
     <h1 class="fe-wordmark fe-wordmark--tilt fe-wordmark--enter" aria-label="Feeeesh">
       F<span class="fe-wordmark__accent">eee</span>sh
@@ -10,66 +10,70 @@
   </div>
 }
 
-<div class="fe-home" [class.fe-home--ready]="!showSplash()">
-  <div #viewport class="fe-home__tank" aria-label="Feeeesh tank"></div>
+@if (screen() === 'lobby') {
+  <div class="fe-lobby">
+    <div class="fe-lobby__bg" aria-hidden="true"></div>
+    <div class="fe-lobby__veil" aria-hidden="true"></div>
 
-  <div class="fe-home__chrome">
-    <header class="fe-home__top">
-      <h1 class="fe-wordmark fe-wordmark--tilt fe-wordmark--enter" aria-label="Feeeesh">
-        F<span class="fe-wordmark__accent">eee</span>sh
-      </h1>
+    <div class="fe-lobby__chrome">
+      <header class="fe-lobby__top">
+        <h1 class="fe-wordmark fe-wordmark--tilt fe-wordmark--enter" aria-label="Feeeesh">
+          F<span class="fe-wordmark__accent">eee</span>sh
+        </h1>
 
-      @if (me(); as m) {
-        <div class="fe-status-chip" aria-label="Tank status">
-          <span>{{ m.pearls }} Pearls</span>
-          <span>{{ m.tank.occupied }}/{{ m.tank.capacity }} fish</span>
-          <span>{{ m.isGuest ? 'Guest' : (m.email ?? 'Account') }}</span>
+        <div class="fe-lobby__top-right">
+          @if (me(); as m) {
+            <div class="fe-status-chip" aria-label="Tank status">
+              <span>{{ m.isGuest ? 'Guest' : (m.email ?? 'Account') }}</span>
+              <span>{{ m.pearls }} Pearls</span>
+              <span>{{ m.tank.occupied }}/{{ m.tank.capacity }} fish</span>
+            </div>
+            <button type="button" class="fe-pill fe-pill--save" (click)="showAuth = !showAuth; showMore = true">
+              {{ m.isGuest ? 'Save to account' : 'Account' }}
+            </button>
+          }
         </div>
-      }
-    </header>
+      </header>
 
-    <div class="fe-home__bottom">
-      <div class="fe-home__dock">
-        @if (primaryAction(); as action) {
-          <button
-            type="button"
-            class="fe-pill fe-pill--primary"
-            [class.fe-pill--pulse]="action.pulse"
-            [disabled]="busy()"
-            (click)="runPrimary()"
-          >
-            {{ action.label }}
-          </button>
-        }
-
-        <button type="button" class="fe-pill fe-pill--ghost" [disabled]="busy()" (click)="tend()">
-          Tend
+      <div class="fe-lobby__heroes">
+        <button type="button" class="fe-hero fe-hero--primary" (click)="openTank()">
+          <span class="fe-hero__icon fe-hero__icon--fish" aria-hidden="true"></span>
+          <span class="fe-hero__label">View Tank</span>
+          <span class="fe-hero__sub">Watch your aquarium</span>
         </button>
+
+        <button
+          type="button"
+          class="fe-hero fe-hero--secondary"
+          [disabled]="busy()"
+          (click)="summon()"
+        >
+          <span class="fe-hero__icon fe-hero__icon--spark" aria-hidden="true"></span>
+          <span class="fe-hero__label">Summon Fish</span>
+          <span class="fe-hero__sub">{{ summonLabel() }}</span>
+        </button>
+      </div>
+
+      <div class="fe-lobby__bottom">
         <button type="button" class="fe-pill fe-pill--ghost" (click)="showMore = !showMore">
           {{ showMore ? 'Close' : 'More' }}
         </button>
-
         @if (me(); as m) {
           <button type="button" class="fe-share" (click)="copyShare(m)">
             {{ shareCopied() ? 'Link copied' : 'Share' }}
           </button>
         }
-      </div>
 
-      @if (error() || status()) {
-        <p class="fe-toast" [class.fe-toast--error]="!!error()">{{ error() ?? status() }}</p>
-      }
+        @if (error() || status()) {
+          <p class="fe-toast" [class.fe-toast--error]="!!error()">{{ error() ?? status() }}</p>
+        }
+      </div>
 
       @if (showMore) {
         <div class="fe-more fe-glass" role="dialog" aria-label="More actions">
-          <p class="fe-more__hint">Secondary actions stay quiet so the tank can breathe.</p>
+          <p class="fe-more__hint">Quiet extras — keep the lobby sparse.</p>
           <div class="fe-more__row">
-            <button type="button" class="fe-pill fe-pill--ghost" [disabled]="busy() || !me()?.dailyClaimAvailable" (click)="daily()">
-              Daily roll
-            </button>
-            <button type="button" class="fe-pill fe-pill--ghost" [disabled]="busy()" (click)="cast()">
-              Cast (15 Pearls)
-            </button>
+            <button type="button" class="fe-pill fe-pill--ghost" [disabled]="busy()" (click)="tend()">Tend</button>
             <button type="button" class="fe-pill fe-pill--ghost" (click)="showAuth = !showAuth">
               {{ me()?.isGuest ? 'Save with email' : 'Account' }}
             </button>
@@ -113,4 +117,41 @@
       }
     </div>
   </div>
-</div>
+}
+
+@if (screen() === 'tank') {
+  <div class="fe-tank">
+    <div #viewport class="fe-tank__viewport" aria-label="Feeeesh tank"></div>
+
+    <div class="fe-tank__hud">
+      <header class="fe-tank__top">
+        <button type="button" class="fe-pill fe-pill--ghost" (click)="backToLobby()">← Lobby</button>
+        <div class="fe-wordmark fe-wordmark--sm" aria-label="Feeeesh">
+          F<span class="fe-wordmark__accent">eee</span>sh
+        </div>
+        @if (me(); as m) {
+          <div class="fe-status-chip">
+            <span>{{ m.pearls }} Pearls</span>
+            <span>{{ m.tank.occupied }}/{{ m.tank.capacity }} fish</span>
+          </div>
+        }
+      </header>
+
+      <div class="fe-tank__bottom">
+        <button type="button" class="fe-hero fe-hero--secondary fe-hero--compact" [disabled]="busy()" (click)="summon()">
+          <span class="fe-hero__label">Summon Fish</span>
+          <span class="fe-hero__sub">{{ summonLabel() }}</span>
+        </button>
+        <button type="button" class="fe-pill fe-pill--ghost" [disabled]="busy()" (click)="tend()">Tend</button>
+        @if (me(); as m) {
+          <button type="button" class="fe-share" (click)="copyShare(m)">
+            {{ shareCopied() ? 'Link copied' : 'Share' }}
+          </button>
+        }
+        @if (error() || status()) {
+          <p class="fe-toast" [class.fe-toast--error]="!!error()">{{ error() ?? status() }}</p>
+        }
+      </div>
+    </div>
+  </div>
+}

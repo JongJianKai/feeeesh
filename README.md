@@ -36,11 +36,12 @@ npm start
 - Soft care states + Tend / revive
 - Email register/login + vanity slug claim
 - Public read-only tank view
-- Greybox procedural pixel-ish fish (replace with human-made art before public launch)
+- Lobby shell: splash → pixel lobby (View Tank / Summon Fish) → immersive View Tank
+- Placeholder AI pixel lobby BG + fish sprites under `src/feeeesh-web/public/assets/` (**preview only** — final shipped art must be human-made per product legal lock)
 
 ## Not included yet
 
-- Azure deploy, real email SMTP verification, Redis, SignalR, human pixel atlases
+- Azure deploy, real email SMTP verification, Redis, SignalR, final human-made pixel atlases
 
 ## Security
 
