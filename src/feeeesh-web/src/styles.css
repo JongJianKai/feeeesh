@@ -2,13 +2,190 @@
   box-sizing: border-box;
 }
 
+:root {
+  /* Atmosphere — aquarium, not purple-default */
+  --fe-aqua-top: #7ec8e3;
+  --fe-teal-deep: #0b3d4a;
+  --fe-coral: #ff7a59;
+  --fe-coral-deep: #e85a3c;
+  --fe-pearl: #f4fbff;
+  --fe-ink: #0a1f28;
+  --fe-glass: rgba(8, 32, 40, 0.55);
+  --fe-glass-border: rgba(244, 251, 255, 0.18);
+  --fe-success: #3ecf8e;
+  --fe-muted: rgba(244, 251, 255, 0.72);
+
+  --fe-radius-pill: 999px;
+  --fe-radius-panel: 16px;
+  --fe-blur: 12px;
+
+  --fe-font-display: "Nunito", "Trebuchet MS", sans-serif;
+  --fe-font-ui: "Nunito", system-ui, sans-serif;
+
+  --fe-shadow-hard: 4px 4px 0 var(--fe-ink);
+  --fe-shadow-hard-sm: 2px 2px 0 var(--fe-ink);
+}
+
 html,
 body {
   margin: 0;
   min-height: 100%;
-  background: #071820;
+  background: var(--fe-teal-deep);
+  color: var(--fe-pearl);
+  font-family: var(--fe-font-ui);
 }
 
 body {
   overflow-x: hidden;
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+.fe-wordmark {
+  font-family: var(--fe-font-display);
+  font-weight: 900;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--fe-pearl);
+  -webkit-text-stroke: 3px var(--fe-ink);
+  paint-order: stroke fill;
+  text-shadow:
+    4px 4px 0 var(--fe-ink),
+    0 0 0 var(--fe-ink);
+  margin: 0;
+}
+
+.fe-wordmark__accent {
+  color: var(--fe-coral);
+}
+
+.fe-wordmark--tilt {
+  display: inline-block;
+  transform: rotate(-3deg);
+  transform-origin: left center;
+}
+
+.fe-wordmark--enter {
+  animation: fe-wordmark-enter 0.55s ease-out both;
+}
+
+@keyframes fe-wordmark-enter {
+  from {
+    opacity: 0;
+    transform: rotate(-3deg) scale(0.96);
+    text-shadow: 2px 2px 0 var(--fe-ink);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-3deg) scale(1);
+    text-shadow:
+      4px 4px 0 var(--fe-ink),
+      0 0 0 var(--fe-ink);
+  }
+}
+
+.fe-glass {
+  background: var(--fe-glass);
+  border: 1px solid var(--fe-glass-border);
+  border-radius: var(--fe-radius-panel);
+  backdrop-filter: blur(var(--fe-blur));
+  -webkit-backdrop-filter: blur(var(--fe-blur));
+}
+
+.fe-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  border-radius: var(--fe-radius-pill);
+  padding: 0.75rem 1.35rem;
+  font: 800 1rem/1 var(--fe-font-ui);
+  color: var(--fe-pearl);
+  cursor: pointer;
+  box-shadow: var(--fe-shadow-hard-sm);
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.fe-pill:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.fe-pill:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.fe-pill--primary {
+  background: linear-gradient(105deg, var(--fe-coral) 0%, var(--fe-coral-deep) 55%, #ff9a6b 100%);
+  color: var(--fe-pearl);
+  position: relative;
+  overflow: hidden;
+}
+
+.fe-pill--primary.fe-pill--pulse {
+  animation: fe-cta-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes fe-cta-pulse {
+  0%,
+  100% {
+    box-shadow: var(--fe-shadow-hard-sm);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 3px 3px 0 var(--fe-ink), 0 0 0 4px rgba(255, 122, 89, 0.22);
+    filter: brightness(1.06);
+  }
+}
+
+.fe-pill--ghost {
+  background: var(--fe-glass);
+  border: 1px solid var(--fe-glass-border);
+  box-shadow: none;
+  color: var(--fe-muted);
+  backdrop-filter: blur(var(--fe-blur));
+  -webkit-backdrop-filter: blur(var(--fe-blur));
+}
+
+.fe-share {
+  font: 600 0.85rem/1 var(--fe-font-ui);
+  color: var(--fe-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.35rem 0.15rem;
+}
+
+.fe-share:hover {
+  color: var(--fe-pearl);
+}
+
+.fe-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.85rem;
+  font: 600 0.82rem/1.2 var(--fe-font-ui);
+  color: var(--fe-muted);
+  border-radius: var(--fe-radius-pill);
+  background: var(--fe-glass);
+  border: 1px solid var(--fe-glass-border);
+  backdrop-filter: blur(var(--fe-blur));
+  -webkit-backdrop-filter: blur(var(--fe-blur));
+  white-space: nowrap;
+}
+
+.fe-status-chip span + span::before {
+  content: "·";
+  margin-right: 0.65rem;
+  opacity: 0.55;
 }
