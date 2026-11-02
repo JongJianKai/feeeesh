@@ -1,14 +1,14 @@
 # Feeeesh
 
-Cozy web idle collectible aquarium — Angular + Three.js billboard fish + ASP.NET Core API.
+Cozy web idle collectible aquarium — Angular + Three.js free-fly tank (glTF fish) + ASP.NET Core API.
 
-Product decisions: see Project store `docs/fish-tank-game-concept.md`.
+Product decisions: Project store `docs/fish-tank-game-concept.md` · free-fly plan: `docs/feeeesh-3d-view-tank-plan.md`.
 
 ## Stack (MVP demo)
 
 | Layer | Choice |
 | --- | --- |
-| Web | Angular 19 + Three.js (pixel billboards) |
+| Web | Angular 19 + Three.js (PointerLock free-fly + glTF voxel fish) |
 | API | ASP.NET Core 9 |
 | DB (local demo) | SQLite (`feeeesh.dev.db`) |
 | Prod target | Azure + PostgreSQL (swap connection string later) |
@@ -32,16 +32,18 @@ npm start
 ## MVP features in this scaffold
 
 - Guest session + 2 starter commons + random public slug `/t/{slug}`
-- Pearls, daily free roll, Cast (15 Pearls)
+- Pearls, daily free roll first, then Cast for Pearls
 - Soft care states + Tend / revive
 - Email register/login + vanity slug claim
-- Public read-only tank view
-- Lobby shell: splash → pixel lobby (View Tank / Summon Fish) → immersive View Tank
-- Placeholder AI pixel lobby BG + fish sprites under `src/feeeesh-web/public/assets/` (**preview only** — final shipped art must be human-made per product legal lock)
+- Splash 2B (coral→purple pinstripes, pearl orb, Loading Feeeesh...)
+- Lobby 3A (View Tank + Summon Fish glossy heroes on strong pixel BG)
+- View Tank free-fly: WASD + pointer-lock; Space up / Ctrl down; clip inside glass
+- Public `/t/{slug}` uses the same free camera
+- 3 AI-backed glTF fish under `src/feeeesh-web/public/assets/fish/*.glb` (non-monetized; no Pokémon IP)
 
 ## Not included yet
 
-- Azure deploy, real email SMTP verification, Redis, SignalR, final human-made pixel atlases
+- Azure deploy, real email SMTP verification, Redis, SignalR, mobile free-fly controls
 
 ## Security
 

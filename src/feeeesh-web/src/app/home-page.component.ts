@@ -22,7 +22,6 @@ export class HomePageComponent implements OnInit, OnDestroy {
   busy = signal(false);
   screen = signal<Screen>('splash');
   splashProgress = signal(8);
-  splashLabel = signal('Warming the tank…');
   shareCopied = signal(false);
   showMore = false;
   showAuth = false;
@@ -38,9 +37,9 @@ export class HomePageComponent implements OnInit, OnDestroy {
 
   summonLabel = computed(() => {
     const m = this.me();
-    if (!m) return 'Summon Fish';
-    if (m.dailyClaimAvailable) return 'Summon Fish · Daily';
-    return 'Summon Fish · 15 Pearls';
+    if (!m) return 'Daily free roll';
+    if (m.dailyClaimAvailable) return 'Daily free roll';
+    return 'Cast for Pearls';
   });
 
   async ngOnInit() {
@@ -57,12 +56,10 @@ export class HomePageComponent implements OnInit, OnDestroy {
       this.me.set(me);
       this.status.set('Your tank is ready');
       this.splashProgress.set(100);
-      this.splashLabel.set('Ready');
       await this.finishSplash();
     } catch (e: any) {
       this.error.set(e?.message ?? 'Failed to start. Is the API running on :5071?');
       this.status.set('Could not start');
-      this.splashLabel.set('Still waiting…');
       this.screen.set('lobby');
     }
   }
@@ -77,8 +74,6 @@ export class HomePageComponent implements OnInit, OnDestroy {
     this.splashTimer = setInterval(() => {
       const next = Math.min(92, this.splashProgress() + 7 + Math.random() * 10);
       this.splashProgress.set(next);
-      if (next > 40 && next < 75) this.splashLabel.set('Calling fish…');
-      if (next >= 75) this.splashLabel.set('Almost there…');
     }, 180);
   }
 
@@ -129,10 +124,10 @@ export class HomePageComponent implements OnInit, OnDestroy {
     try {
       if (m.dailyClaimAvailable) {
         const r = await this.api.daily();
-        this.status.set(`Summoned ${r.fish.speciesName} (${r.fish.rarity})`);
+        this.status.set(`Daily free roll: ${r.fish.speciesName} (${r.fish.rarity})`);
       } else {
         const r = await this.api.cast();
-        this.status.set(`Cast: ${r.fish.speciesName} (${r.fish.rarity})`);
+        this.status.set(`Cast for Pearls: ${r.fish.speciesName} (${r.fish.rarity})`);
       }
       const me = await this.api.me();
       this.applyMe(me);
