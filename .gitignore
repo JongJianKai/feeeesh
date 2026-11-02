@@ -1,14 +1,42 @@
+# Build / deps
 **/bin/
 **/obj/
 **/node_modules/
 **/dist/
+.angular/
+
+# Local databases (never commit user data)
 *.db
-*.db-shm
-*.db-wal
-.DS_Store
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Env / secrets / local overrides
 .env
+.env.*
+!.env.example
+secrets.json
+**/secrets.json
+appsettings.*.local.json
+**/appsettings.*.local.json
+
+# ASP.NET user secrets (local machine path is outside repo; keep pattern for safety)
+**/Properties/Secrets.json
+
+# Certs / keys
+*.pem
+*.key
+*.pfx
+*.p12
+*.crt
+id_rsa
+id_rsa.*
+*.cookie
+
+# IDE / OS
 .vs/
 .idea/
 *.user
 *.suo
-.angular/
+.DS_Store
+Thumbs.db

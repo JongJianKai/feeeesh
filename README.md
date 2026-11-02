@@ -40,4 +40,10 @@ npm start
 
 ## Not included yet
 
-- Azure deploy, real email SMTP verification, Redis, SignalR, human pixel atlases, GitHub remote
+- Azure deploy, real email SMTP verification, Redis, SignalR, human pixel atlases
+
+## Security
+
+- Do **not** commit secrets: Production Postgres connection strings, GitHub PATs, SMTP/API keys, JWT signing keys, private certs, or local SQLite DBs with user data.
+- Prefer environment variables, Azure Key Vault, or `dotnet user-secrets` for anything sensitive. Local overrides: `appsettings.*.local.json` / `.env` (both gitignored).
+- Session cookies and password hashes live only in the local SQLite DB (`*.db` gitignored); never check that file in.
