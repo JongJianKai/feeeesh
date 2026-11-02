@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+*.db
+*.db-shm
+*.db-wal
+.DS_Store
+.env
+.vs/
+.idea/
+*.user
+*.suo
+.angular/

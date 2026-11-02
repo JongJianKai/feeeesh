@@ -1,0 +1,62 @@
+<div class="shell">
+  <header class="top">
+    <div class="brand">Feeeesh</div>
+    <p class="tag">{{ status() }}</p>
+    @if (me(); as m) {
+      <div class="meta">
+        <span>{{ m.pearls }} Pearls</span>
+        <span>{{ m.tank.occupied }}/{{ m.tank.capacity }} fish</span>
+        <span>{{ m.isGuest ? 'Guest' : m.email }}</span>
+        <a [href]="shareUrl(m)" target="_blank" rel="noopener">Share {{ m.tank.publicPath }}</a>
+      </div>
+    }
+  </header>
+
+  <div #viewport class="viewport" aria-label="Feeeesh tank"></div>
+
+  <aside class="dock">
+    <div class="actions">
+      <button type="button" (click)="daily()" [disabled]="me() && !me()!.dailyClaimAvailable">Daily roll</button>
+      <button type="button" (click)="cast()">Cast (15 Pearls)</button>
+      <button type="button" class="ghost" (click)="tend()">Tend tank</button>
+      <button type="button" class="ghost" (click)="showAuth = !showAuth">
+        {{ me()?.isGuest ? 'Save with email' : 'Account' }}
+      </button>
+    </div>
+
+    @if (error()) {
+      <p class="err">{{ error() }}</p>
+    }
+
+    @if (showAuth) {
+      <div class="auth">
+        <input [(ngModel)]="email" type="email" placeholder="Email" autocomplete="username" />
+        <input [(ngModel)]="password" type="password" placeholder="Password (8+)" autocomplete="new-password" />
+        <div class="row">
+          <button type="button" (click)="register()">Register / link</button>
+          <button type="button" class="ghost" (click)="login()">Login</button>
+        </div>
+        @if (me() && !me()!.isGuest) {
+          <div class="row">
+            <input [(ngModel)]="vanity" placeholder="vanity-slug" />
+            <button type="button" (click)="claimVanity()">Claim vanity</button>
+          </div>
+        }
+      </div>
+    }
+
+    @if (me(); as m) {
+      <ul class="roster">
+        @for (f of m.tank.fish; track f.id) {
+          <li [class.out]="!f.inTank">
+            <span class="dot" [style.background]="f.colorHex"></span>
+            <strong>{{ f.speciesName }}</strong>
+            <em>{{ f.rarity }}</em>
+            <span>{{ f.care }}</span>
+            <span>{{ f.inTank ? 'in tank' : 'inventory' }}</span>
+          </li>
+        }
+      </ul>
+    }
+  </aside>
+</div>
