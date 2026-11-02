@@ -93,8 +93,9 @@ export class TankScene {
     host.appendChild(this.renderer.domElement);
     host.style.position = host.style.position || 'relative';
 
-    this.camera = new THREE.PerspectiveCamera(65, w / h, 0.05, 100);
-    this.camera.position.set(0, 0.15, 0.85);
+    this.camera = new THREE.PerspectiveCamera(70, w / h, 0.05, 100);
+    // Start near the front glass looking into the tank (fish swim ahead).
+    this.camera.position.set(0, 0.1, 0.92);
 
     this.controls = new PointerLockControls(this.camera, this.renderer.domElement);
     this.scene.add(this.controls.object);
@@ -191,7 +192,7 @@ export class TankScene {
     bgTex.minFilter = THREE.NearestFilter;
     const backdrop = new THREE.Mesh(
       new THREE.PlaneGeometry(14, 8),
-      new THREE.MeshBasicMaterial({ map: bgTex, depthWrite: false })
+      new THREE.MeshBasicMaterial({ map: bgTex, depthWrite: false, opacity: 0.55, transparent: true })
     );
     backdrop.position.set(0, 0.2, -3.2);
     this.scene.add(backdrop);
@@ -258,23 +259,34 @@ export class TankScene {
           root = makeFallbackFish(f.colorHex, f.accentHex);
         }
 
-        const scale = 0.42 * f.size * (f.care === 'Down' ? 0.85 : 1);
-        root.scale.setScalar(scale);
-        root.position.set(f.posX, f.care === 'Down' ? -1.15 : f.posY, f.posZ);
-
+        // Keep glTF PBR colors; tweak care opacity / slight emissive so voxels read underwater.
         root.traverse((o) => {
           const m = o as THREE.Mesh;
-          if (m.isMesh && m.material) {
-            const mats = Array.isArray(m.material) ? m.material : [m.material];
-            for (const mat of mats) {
-              if ('opacity' in mat) {
-                (mat as THREE.MeshStandardMaterial).transparent = f.care !== 'Healthy';
-                (mat as THREE.MeshStandardMaterial).opacity =
-                  f.care === 'Healthy' ? 1 : f.care === 'NeedsCare' ? 0.82 : 0.55;
-              }
+          if (!m.isMesh) return;
+          const mats = (Array.isArray(m.material) ? m.material : [m.material]).filter(Boolean);
+          for (const raw of mats) {
+            const mat = raw as THREE.MeshStandardMaterial;
+            if ('color' in mat && mat.color) {
+              mat.emissive = mat.color.clone().multiplyScalar(0.12);
+              mat.emissiveIntensity = 0.55;
+              mat.roughness = 0.45;
+              mat.metalness = 0.05;
+            }
+            if ('opacity' in mat) {
+              mat.transparent = f.care !== 'Healthy';
+              mat.opacity = f.care === 'Healthy' ? 1 : f.care === 'NeedsCare' ? 0.82 : 0.55;
+              mat.needsUpdate = true;
             }
           }
         });
+
+        const scale = 0.72 * f.size * (f.care === 'Down' ? 0.85 : 1);
+        root.scale.setScalar(scale);
+        // Keep fish a bit more centered/visible for free-fly
+        const px = f.posX * 0.75;
+        const py = f.care === 'Down' ? -1.15 : f.posY * 0.6 + 0.05;
+        const pz = Math.max(-0.75, f.posZ * 0.5);
+        root.position.set(px, py, pz);
 
         (root as FishNode).userData = {
           fishId: f.id,
