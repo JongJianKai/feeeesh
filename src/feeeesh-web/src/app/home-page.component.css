@@ -1,22 +1,24 @@
-/* —— Splash —— */
+/* —— Splash 2B: coral → purple pinstripes —— */
 .fe-splash {
   position: fixed;
   inset: 0;
   z-index: 40;
-  display: grid;
-  place-items: center;
-  gap: 2.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.35rem;
   background:
     repeating-linear-gradient(
       -32deg,
-      transparent 0 12px,
-      rgba(10, 31, 40, 0.12) 12px 13px
+      transparent 0 10px,
+      rgba(20, 8, 36, 0.1) 10px 11px
     ),
-    linear-gradient(135deg, var(--fe-aqua-top) 0%, #2a8f9e 45%, var(--fe-teal-deep) 100%);
+    linear-gradient(135deg, #ff6b4a 0%, #ff4d7a 38%, #b44ad8 72%, #6b2bb8 100%);
 }
 
 .fe-splash .fe-wordmark {
-  font-size: clamp(3.2rem, 9vw, 5.8rem);
+  font-size: clamp(3.4rem, 10vw, 6rem);
   transform-origin: center;
 }
 
@@ -35,30 +37,74 @@
   }
 }
 
+/* Original pearl orb — not a Poké Ball */
+.fe-splash__ball {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, #ffffff 0%, #d8f4ff 28%, #7fd3ff 58%, #2a7fb0 100%);
+  border: 3px solid var(--fe-ink);
+  box-shadow:
+    4px 4px 0 var(--fe-ink),
+    inset 0 -10px 0 rgba(10, 31, 40, 0.12);
+  animation: fe-ball-bob 2.4s ease-in-out infinite;
+}
+
+.fe-splash__ball-shine {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  width: 18px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  transform: rotate(-18deg);
+}
+
+@keyframes fe-ball-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+.fe-splash__load {
+  position: absolute;
+  bottom: 11vh;
+  display: grid;
+  gap: 0.45rem;
+  justify-items: center;
+  width: min(320px, 78vw);
+}
+
+.fe-splash__load-text {
+  margin: 0;
+  font: 800 0.95rem/1.2 var(--fe-font-ui);
+  color: var(--fe-ink);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
 .fe-splash__bar {
   position: relative;
-  width: min(300px, 72vw);
-  height: 30px;
+  width: 100%;
+  height: 10px;
   border-radius: var(--fe-radius-pill);
-  background: var(--fe-pearl);
-  color: var(--fe-ink);
-  font: 700 0.85rem/30px var(--fe-font-ui);
-  text-align: center;
-  box-shadow: var(--fe-shadow-hard-sm);
+  background: rgba(244, 251, 255, 0.92);
+  border: 2px solid var(--fe-ink);
+  box-shadow: 2px 2px 0 var(--fe-ink);
   overflow: hidden;
 }
 
 .fe-splash__bar-fill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: linear-gradient(90deg, var(--fe-coral), var(--fe-success));
-  opacity: 0.5;
+  background: linear-gradient(90deg, #3aa0d8, #57d0e8);
   transition: width 0.2s ease;
-}
-
-.fe-splash__bar-label {
-  position: relative;
-  z-index: 1;
 }
 
 /* —— Lobby —— */
@@ -74,15 +120,16 @@
   background:
     url("/assets/feeeesh-lobby-bg-pixel.jpg") center / cover no-repeat;
   image-rendering: pixelated;
-  transform: scale(1.02);
+  transform: scale(1.04);
+  filter: saturate(1.15) contrast(1.05);
 }
 
 .fe-lobby__veil {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 60% at 30% 40%, transparent 0%, rgba(5, 24, 32, 0.35) 100%),
-    linear-gradient(180deg, rgba(5, 24, 32, 0.25) 0%, transparent 28%, transparent 70%, rgba(5, 24, 32, 0.45) 100%);
+    radial-gradient(ellipse 70% 55% at 28% 42%, transparent 0%, rgba(5, 24, 32, 0.28) 100%),
+    linear-gradient(180deg, rgba(5, 24, 32, 0.2) 0%, transparent 26%, transparent 68%, rgba(5, 24, 32, 0.5) 100%);
   pointer-events: none;
 }
 
@@ -171,12 +218,18 @@
 }
 
 .fe-hero--primary {
-  background: linear-gradient(115deg, var(--fe-coral) 0%, var(--fe-coral-deep) 55%, #ff9a6b 100%);
+  /* Continue-slot craft */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, transparent 42%),
+    linear-gradient(115deg, var(--fe-coral) 0%, var(--fe-coral-deep) 55%, #ff9a6b 100%);
   flex: 1.15 1 280px;
 }
 
 .fe-hero--secondary {
-  background: linear-gradient(115deg, #3ec7e0 0%, #1f8fad 55%, #57d0e8 100%);
+  /* Crystal-slot craft */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, transparent 42%),
+    linear-gradient(115deg, #57d0e8 0%, #1f8fad 52%, #3ec7e0 100%);
   flex: 1 1 240px;
 }
 
@@ -381,4 +434,8 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.65rem;
+}
+
+.fe-tank__hint-space {
+  height: 2.5rem;
 }

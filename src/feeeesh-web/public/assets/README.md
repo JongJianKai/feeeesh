@@ -1,10 +1,9 @@
-# Feeeesh web assets (placeholders)
+# Feeeesh web assets
 
-These pixel images are **AI-generated placeholders for cloud preview only**.
-
-Final shipped Feeeesh fish / decor art must be **human-made** (self or commissioned) per product legal lock — see Project `docs/fish-tank-game-concept.md` decision #11.
-
-| File | Use |
+| Path | Use |
 | --- | --- |
-| `feeeesh-lobby-bg-pixel.jpg` | Lobby full-bleed background + tank backdrop |
-| `fish/*.png` | Three.js billboard sprites (sliced from fish sheet; white keyed) |
+| `feeeesh-lobby-bg-pixel.jpg` | Lobby full-bleed BG + tank backdrop |
+| `fish/*.glb` | Three.js free-fly tank — **3** AI-backed voxel glTF species (`coral-bit`, `aqua-block`, `pearl-voxel`) |
+| `fish/*.png` | Legacy billboard sprites (unused by free-fly path; kept for fallback/reference) |
+
+**Legal (locked for this project):** non-monetized; AI-backed glTF fish accepted by owner. **No Pokémon / PokéBonk IP.** Concepts live under Project `media/fish-ai/`.

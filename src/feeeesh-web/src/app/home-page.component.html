@@ -3,9 +3,14 @@
     <h1 class="fe-wordmark fe-wordmark--tilt fe-wordmark--enter" aria-label="Feeeesh">
       F<span class="fe-wordmark__accent">eee</span>sh
     </h1>
-    <div class="fe-splash__bar">
-      <div class="fe-splash__bar-fill" [style.width.%]="splashProgress()"></div>
-      <span class="fe-splash__bar-label">{{ splashLabel() }}</span>
+    <div class="fe-splash__ball" aria-hidden="true">
+      <span class="fe-splash__ball-shine"></span>
+    </div>
+    <div class="fe-splash__load">
+      <p class="fe-splash__load-text">Loading Feeeesh...</p>
+      <div class="fe-splash__bar">
+        <div class="fe-splash__bar-fill" [style.width.%]="splashProgress()"></div>
+      </div>
     </div>
   </div>
 }

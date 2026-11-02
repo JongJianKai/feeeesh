@@ -1,27 +1,36 @@
 import * as THREE from 'three';
+import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { FishDto } from './api.service';
-import { spriteUrlForSpecies } from './fish-sprites';
+import { glbUrlForSpecies } from './fish-models';
 
-type FishMesh = THREE.Mesh & {
+type FishNode = THREE.Object3D & {
   userData: { fishId: string; phase: number; speed: number; base: THREE.Vector3; care: string };
 };
 
-const textureCache = new Map<string, THREE.Texture>();
-const loader = new THREE.TextureLoader();
+/** Inner glass volume — camera stays inside this AABB. */
+const TANK = {
+  minX: -2.35,
+  maxX: 2.35,
+  minY: -1.25,
+  maxY: 1.25,
+  minZ: -1.0,
+  maxZ: 1.0
+};
 
-function loadSprite(url: string): Promise<THREE.Texture> {
-  const hit = textureCache.get(url);
-  if (hit) return Promise.resolve(hit);
+const MOVE_SPEED = 2.4;
+const glbCache = new Map<string, THREE.Object3D>();
+const gltfLoader = new GLTFLoader();
+
+function loadGlb(url: string): Promise<THREE.Object3D> {
+  const hit = glbCache.get(url);
+  if (hit) return Promise.resolve(hit.clone(true));
   return new Promise((resolve, reject) => {
-    loader.load(
+    gltfLoader.load(
       url,
-      (tex) => {
-        tex.magFilter = THREE.NearestFilter;
-        tex.minFilter = THREE.NearestFilter;
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.needsUpdate = true;
-        textureCache.set(url, tex);
-        resolve(tex);
+      (gltf) => {
+        glbCache.set(url, gltf.scene);
+        resolve(gltf.scene.clone(true));
       },
       undefined,
       reject
@@ -29,105 +38,163 @@ function loadSprite(url: string): Promise<THREE.Texture> {
   });
 }
 
-/** Procedural fallback if a sprite fails to load (still pixel-ish). */
-function makeFallbackTexture(colorHex: string, accentHex: string, care: string): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 64;
-  canvas.height = 32;
-  const ctx = canvas.getContext('2d')!;
-  ctx.imageSmoothingEnabled = false;
-  ctx.clearRect(0, 0, 64, 32);
-  const dim = care === 'Healthy' ? 1 : care === 'NeedsCare' ? 0.72 : 0.45;
-  const fill = (hex: string) => {
-    const c = new THREE.Color(hex);
-    c.multiplyScalar(dim);
-    return `#${c.getHexString()}`;
-  };
-  ctx.fillStyle = fill(colorHex);
-  ctx.fillRect(10, 10, 36, 12);
-  ctx.fillRect(8, 12, 4, 8);
-  ctx.fillRect(44, 8, 8, 6);
-  ctx.fillRect(44, 18, 8, 6);
-  ctx.fillStyle = fill(accentHex);
-  ctx.fillRect(14, 12, 8, 8);
-  ctx.fillStyle = care === 'Down' ? '#555' : '#111';
-  ctx.fillRect(12, 14, 3, 3);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.magFilter = THREE.NearestFilter;
-  tex.minFilter = THREE.NearestFilter;
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
+/** Chunked procedural fish if a glTF fails. */
+function makeFallbackFish(colorHex: string, accentHex: string): THREE.Group {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.9, 0.45, 0.35),
+    new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.55 })
+  );
+  const accent = new THREE.Mesh(
+    new THREE.BoxGeometry(0.35, 0.35, 0.3),
+    new THREE.MeshStandardMaterial({ color: accentHex, roughness: 0.55 })
+  );
+  accent.position.x = 0.4;
+  const tail = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 0.4, 0.08),
+    new THREE.MeshStandardMaterial({ color: accentHex, roughness: 0.55 })
+  );
+  tail.position.x = -0.55;
+  g.add(body, accent, tail);
+  return g;
 }
 
 export class TankScene {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
+  private controls: PointerLockControls;
   private fishGroup = new THREE.Group();
   private bubbleGroup = new THREE.Group();
   private raf = 0;
   private disposed = false;
   private clock = new THREE.Clock();
   private fill?: THREE.PointLight;
+  private keys = new Set<string>();
+  private velocity = new THREE.Vector3();
+  private hintEl?: HTMLDivElement;
+  private onKeyDown = (e: KeyboardEvent) => {
+    this.keys.add(e.code);
+    // prevent page scroll while flying
+    if (['Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'ControlLeft', 'ControlRight'].includes(e.code)) {
+      e.preventDefault();
+    }
+  };
+  private onKeyUp = (e: KeyboardEvent) => this.keys.delete(e.code);
 
   constructor(private host: HTMLElement) {
     const w = host.clientWidth || 960;
     const h = host.clientHeight || 540;
-    this.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(w, h);
     this.renderer.setClearColor(0x0a3a4a, 1);
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     host.appendChild(this.renderer.domElement);
+    host.style.position = host.style.position || 'relative';
 
-    this.camera = new THREE.PerspectiveCamera(42, w / h, 0.1, 100);
-    this.camera.position.set(0, 0.35, 5.2);
-    this.camera.lookAt(0, 0, 0);
+    this.camera = new THREE.PerspectiveCamera(65, w / h, 0.05, 100);
+    this.camera.position.set(0, 0.15, 0.85);
 
-    this.scene.fog = new THREE.FogExp2(0x0b3d4a, 0.038);
+    this.controls = new PointerLockControls(this.camera, this.renderer.domElement);
+    this.scene.add(this.controls.object);
+
+    this.renderer.domElement.addEventListener('click', this.requestLock);
+    this.controls.addEventListener('lock', this.onLock);
+    this.controls.addEventListener('unlock', this.onUnlock);
+
+    this.scene.fog = new THREE.FogExp2(0x0b3d4a, 0.06);
     this.buildTank();
     this.scene.add(this.fishGroup);
     this.scene.add(this.bubbleGroup);
+    this.mountHint();
     this.loop();
+
     window.addEventListener('resize', this.onResize);
+    window.addEventListener('keydown', this.onKeyDown);
+    window.addEventListener('keyup', this.onKeyUp);
+  }
+
+  private requestLock = () => {
+    if (!this.controls.isLocked) this.controls.lock();
+  };
+
+  private onLock = () => {
+    if (this.hintEl) this.hintEl.style.opacity = '0';
+  };
+
+  private onUnlock = () => {
+    if (this.hintEl) this.hintEl.style.opacity = '1';
+  };
+
+  private mountHint() {
+    const el = document.createElement('div');
+    el.className = 'fe-tank-hint';
+    el.textContent = 'Click tank to look · WASD move · Space up · Ctrl down · Esc unlock';
+    Object.assign(el.style, {
+      position: 'absolute',
+      left: '50%',
+      bottom: '5.5rem',
+      transform: 'translateX(-50%)',
+      zIndex: '3',
+      padding: '0.45rem 0.9rem',
+      borderRadius: '999px',
+      background: 'rgba(8, 32, 40, 0.62)',
+      border: '1px solid rgba(244, 251, 255, 0.18)',
+      color: 'rgba(244, 251, 255, 0.85)',
+      font: '600 0.78rem/1.2 Nunito, system-ui, sans-serif',
+      pointerEvents: 'none',
+      transition: 'opacity 0.25s ease',
+      whiteSpace: 'nowrap',
+      maxWidth: '92vw',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    } as CSSStyleDeclaration);
+    this.host.appendChild(el);
+    this.hintEl = el;
   }
 
   private buildTank() {
-    // Pixel aquarium backdrop (AI placeholder) for digital-world depth.
-    void loadSprite('/assets/feeeesh-lobby-bg-pixel.jpg').then((tex) => {
-      if (this.disposed) return;
-      const backdrop = new THREE.Mesh(
-        new THREE.PlaneGeometry(14, 8),
-        new THREE.MeshBasicMaterial({ map: tex, depthWrite: false })
-      );
-      backdrop.position.set(0, 0.2, -3.2);
-      this.scene.add(backdrop);
-      this.renderer.setClearColor(0x0a2f3a, 1);
-    });
-
+    // outer water box (visual shell)
     const water = new THREE.Mesh(
       new THREE.BoxGeometry(5.2, 3.0, 2.4),
       new THREE.MeshStandardMaterial({
         color: 0x1a6b8a,
         transparent: true,
-        opacity: 0.14,
+        opacity: 0.12,
         roughness: 0.35,
-        metalness: 0.05
+        metalness: 0.05,
+        side: THREE.BackSide
       })
     );
     this.scene.add(water);
 
+    // glass edges
     const edges = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(5.25, 3.05, 2.45)),
       new THREE.LineBasicMaterial({ color: 0xcfe9f5 })
     );
     this.scene.add(edges);
 
+    // sand floor
     const sand = new THREE.Mesh(
       new THREE.BoxGeometry(5.0, 0.18, 2.2),
       new THREE.MeshStandardMaterial({ color: 0xcbb896, roughness: 1 })
     );
     sand.position.y = -1.4;
     this.scene.add(sand);
+
+    // pixel backdrop plane behind glass
+    const bgTex = new THREE.TextureLoader().load('/assets/feeeesh-lobby-bg-pixel.jpg');
+    bgTex.colorSpace = THREE.SRGBColorSpace;
+    bgTex.magFilter = THREE.NearestFilter;
+    bgTex.minFilter = THREE.NearestFilter;
+    const backdrop = new THREE.Mesh(
+      new THREE.PlaneGeometry(14, 8),
+      new THREE.MeshBasicMaterial({ map: bgTex, depthWrite: false })
+    );
+    backdrop.position.set(0, 0.2, -3.2);
+    this.scene.add(backdrop);
 
     const rockMat = new THREE.MeshStandardMaterial({ color: 0x6b7c85, roughness: 0.9 });
     const rock = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.5), rockMat);
@@ -148,19 +215,18 @@ export class TankScene {
     coral.position.set(0.9, -1.05, -0.5);
     this.scene.add(coral);
 
-    const key = new THREE.DirectionalLight(0xffffff, 1.15);
+    const key = new THREE.DirectionalLight(0xffffff, 1.2);
     key.position.set(2, 4, 3);
     this.scene.add(key);
-    this.scene.add(new THREE.AmbientLight(0x88aacc, 0.55));
+    this.scene.add(new THREE.AmbientLight(0x88aacc, 0.65));
 
     this.fill = new THREE.PointLight(0x7fd3ff, 0.55, 12);
     this.fill.position.set(0, 1.2, 1.5);
     this.scene.add(this.fill);
 
-    // soft pixel bubbles
     const bubMat = new THREE.MeshBasicMaterial({ color: 0xd8f4ff, transparent: true, opacity: 0.55 });
-    for (let i = 0; i < 18; i++) {
-      const s = 0.04 + Math.random() * 0.06;
+    for (let i = 0; i < 22; i++) {
+      const s = 0.035 + Math.random() * 0.055;
       const b = new THREE.Mesh(new THREE.SphereGeometry(s, 6, 6), bubMat);
       b.position.set((Math.random() - 0.5) * 4.2, -1.2 + Math.random() * 2.4, (Math.random() - 0.5) * 1.6);
       b.userData = { speed: 0.15 + Math.random() * 0.25, phase: Math.random() * Math.PI * 2 };
@@ -171,81 +237,114 @@ export class TankScene {
   async setFish(fish: FishDto[]) {
     while (this.fishGroup.children.length) {
       const child = this.fishGroup.children.pop()!;
-      const mesh = child as THREE.Mesh;
-      const mat = mesh.material as THREE.MeshBasicMaterial;
-      if (mat.map && !textureCache.has((mat.map as any).source?.data?.src)) {
-        // keep cached sprites; dispose only ephemeral canvas maps
-        if ((mat.map as THREE.CanvasTexture).image instanceof HTMLCanvasElement) {
-          mat.map.dispose();
+      child.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (m.isMesh) {
+          m.geometry?.dispose();
+          const mat = m.material;
+          if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
+          else mat?.dispose();
         }
-      }
-      mat.dispose();
-      mesh.geometry.dispose();
+      });
     }
 
     const inTank = fish.filter((x) => x.inTank);
     await Promise.all(
       inTank.map(async (f) => {
-        let map: THREE.Texture;
+        let root: THREE.Object3D;
         try {
-          map = await loadSprite(spriteUrlForSpecies(f.speciesId));
+          root = await loadGlb(glbUrlForSpecies(f.speciesId));
         } catch {
-          map = makeFallbackTexture(f.colorHex, f.accentHex, f.care);
+          root = makeFallbackFish(f.colorHex, f.accentHex);
         }
 
-        const mat = new THREE.MeshBasicMaterial({
-          map,
-          transparent: true,
-          alphaTest: 0.15,
-          side: THREE.DoubleSide,
-          depthWrite: false,
-          opacity: f.care === 'Healthy' ? 1 : f.care === 'NeedsCare' ? 0.82 : 0.55
+        const scale = 0.42 * f.size * (f.care === 'Down' ? 0.85 : 1);
+        root.scale.setScalar(scale);
+        root.position.set(f.posX, f.care === 'Down' ? -1.15 : f.posY, f.posZ);
+
+        root.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (m.isMesh && m.material) {
+            const mats = Array.isArray(m.material) ? m.material : [m.material];
+            for (const mat of mats) {
+              if ('opacity' in mat) {
+                (mat as THREE.MeshStandardMaterial).transparent = f.care !== 'Healthy';
+                (mat as THREE.MeshStandardMaterial).opacity =
+                  f.care === 'Healthy' ? 1 : f.care === 'NeedsCare' ? 0.82 : 0.55;
+              }
+            }
+          }
         });
 
-        const img = map.image as { width?: number; height?: number } | undefined;
-        const aspect = (img?.width || 64) / (img?.height || 32);
-        const h = 0.72 * f.size * (f.care === 'Down' ? 0.9 : 1);
-        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(h * aspect, h), mat) as unknown as FishMesh;
-        mesh.position.set(f.posX, f.care === 'Down' ? -1.15 : f.posY, f.posZ);
-        mesh.userData = {
+        (root as FishNode).userData = {
           fishId: f.id,
           phase: Math.random() * Math.PI * 2,
           speed: 0.35 + Math.random() * 0.5,
-          base: mesh.position.clone(),
+          base: root.position.clone(),
           care: f.care
         };
-        if (f.care === 'Down') mesh.rotation.z = -0.4;
-        this.fishGroup.add(mesh);
+        if (f.care === 'Down') root.rotation.z = -0.35;
+        this.fishGroup.add(root);
       })
     );
+  }
+
+  private clampCamera() {
+    const p = this.camera.position;
+    p.x = Math.min(TANK.maxX, Math.max(TANK.minX, p.x));
+    p.y = Math.min(TANK.maxY, Math.max(TANK.minY, p.y));
+    p.z = Math.min(TANK.maxZ, Math.max(TANK.minZ, p.z));
+  }
+
+  private updateMovement(dt: number) {
+    const forward = Number(this.keys.has('KeyW')) - Number(this.keys.has('KeyS'));
+    const strafe = Number(this.keys.has('KeyD')) - Number(this.keys.has('KeyA'));
+    const vertical = Number(this.keys.has('Space')) - Number(this.keys.has('ControlLeft') || this.keys.has('ControlRight'));
+
+    // damp
+    this.velocity.multiplyScalar(Math.pow(0.001, dt));
+
+    if (this.controls.isLocked || forward || strafe || vertical) {
+      const speed = MOVE_SPEED * dt;
+      if (forward !== 0) this.controls.moveForward(forward * speed);
+      if (strafe !== 0) this.controls.moveRight(strafe * speed);
+      if (vertical !== 0) this.camera.position.y += vertical * speed;
+    }
+
+    this.clampCamera();
   }
 
   private loop = () => {
     if (this.disposed) return;
     this.raf = requestAnimationFrame(this.loop);
-    const t = this.clock.getElapsedTime();
+    const dt = Math.min(0.05, this.clock.getDelta());
+    const t = this.clock.elapsedTime;
     if (this.fill) this.fill.intensity = 0.45 + Math.sin(t * 1.4) * 0.12;
+
+    this.updateMovement(dt);
 
     for (const child of this.bubbleGroup.children) {
       const b = child as THREE.Mesh;
       const { speed, phase } = b.userData as { speed: number; phase: number };
-      b.position.y += speed * 0.016;
+      b.position.y += speed * dt;
       b.position.x += Math.sin(t * 0.8 + phase) * 0.002;
       if (b.position.y > 1.4) b.position.y = -1.35;
     }
 
     for (const child of this.fishGroup.children) {
-      const mesh = child as FishMesh;
-      if (mesh.userData.care === 'Down') continue;
-      const { phase, speed, base } = mesh.userData;
-      const amp = mesh.userData.care === 'NeedsCare' ? 0.18 : 0.35;
-      mesh.position.x = base.x + Math.sin(t * speed + phase) * amp;
-      mesh.position.y = base.y + Math.sin(t * speed * 1.3 + phase) * 0.12;
-      mesh.position.z = base.z + Math.cos(t * speed * 0.7 + phase) * 0.08;
-      const facing = Math.sin(t * speed + phase) > 0 ? 1 : -1;
-      mesh.scale.x = Math.abs(mesh.scale.x) * facing;
-      mesh.lookAt(this.camera.position.x, mesh.position.y, this.camera.position.z);
+      const node = child as FishNode;
+      if (node.userData.care === 'Down') continue;
+      const { phase, speed, base } = node.userData;
+      const amp = node.userData.care === 'NeedsCare' ? 0.18 : 0.35;
+      node.position.x = base.x + Math.sin(t * speed + phase) * amp;
+      node.position.y = base.y + Math.sin(t * speed * 1.3 + phase) * 0.12;
+      node.position.z = base.z + Math.cos(t * speed * 0.7 + phase) * 0.08;
+      // yaw toward swim direction
+      const dx = Math.cos(t * speed + phase);
+      node.rotation.y = dx > 0 ? 0 : Math.PI;
+      node.rotation.z = Math.sin(t * speed * 2 + phase) * 0.08;
     }
+
     this.renderer.render(this.scene, this.camera);
   };
 
@@ -265,6 +364,14 @@ export class TankScene {
     this.disposed = true;
     cancelAnimationFrame(this.raf);
     window.removeEventListener('resize', this.onResize);
+    window.removeEventListener('keydown', this.onKeyDown);
+    window.removeEventListener('keyup', this.onKeyUp);
+    this.renderer.domElement.removeEventListener('click', this.requestLock);
+    this.controls.removeEventListener('lock', this.onLock);
+    this.controls.removeEventListener('unlock', this.onUnlock);
+    if (this.controls.isLocked) this.controls.unlock();
+    this.controls.dispose();
+    this.hintEl?.remove();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
