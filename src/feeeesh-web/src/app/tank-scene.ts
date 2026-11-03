@@ -113,14 +113,14 @@ export class TankScene {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(w, h);
-    this.renderer.setClearColor(0x0a3a4a, 1);
+    this.renderer.setClearColor(0x0d4a5c, 1);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     host.appendChild(this.renderer.domElement);
     host.style.position = host.style.position || 'relative';
 
-    this.camera = new THREE.PerspectiveCamera(68, w / h, 0.05, 120);
-    // Start mid-tank looking toward the far glass so the larger volume reads.
-    this.camera.position.set(0, 0.35, 0.2);
+    this.camera = new THREE.PerspectiveCamera(65, w / h, 0.05, 120);
+    // Front glass looking deep into the larger tank (fish swim ahead).
+    this.camera.position.set(0, 0.25, 1.65);
 
     this.controls = new PointerLockControls(this.camera, this.renderer.domElement);
     this.scene.add(this.controls.object);
@@ -130,8 +130,8 @@ export class TankScene {
     this.controls.addEventListener('unlock', this.onUnlock);
 
     // Soft underwater haze only — no lobby photo behind the glass.
-    this.scene.fog = new THREE.FogExp2(0x0b3d4a, 0.028);
-    this.scene.background = new THREE.Color(0x0a3a4a);
+    this.scene.fog = new THREE.FogExp2(0x0d4a5c, 0.018);
+    this.scene.background = new THREE.Color(0x0d4a5c);
     this.buildTank();
     this.scene.add(this.fishGroup);
     this.scene.add(this.bubbleGroup);
@@ -207,26 +207,27 @@ export class TankScene {
     const backWall = new THREE.Mesh(
       new THREE.PlaneGeometry(9.4, 5.2),
       new THREE.MeshStandardMaterial({
-        color: 0x145a72,
-        roughness: 0.85,
+        color: 0x1a6f88,
+        roughness: 0.9,
         metalness: 0.02,
-        emissive: new THREE.Color(0x0a3040),
-        emissiveIntensity: 0.35
+        emissive: new THREE.Color(0x0e4050),
+        emissiveIntensity: 0.45
       })
     );
     backWall.position.set(0, 0, -2.15);
     this.scene.add(backWall);
 
-    // Subtle caustic-like light panels on the back (procedural blocks, not an image)
+    // Soft god-ray wash (wide planes — not harsh stripes)
     const glowMat = new THREE.MeshBasicMaterial({
-      color: 0x7fd3ff,
+      color: 0xa8e8ff,
       transparent: true,
-      opacity: 0.08
+      opacity: 0.05,
+      depthWrite: false
     });
-    for (let i = 0; i < 5; i++) {
-      const ray = new THREE.Mesh(new THREE.PlaneGeometry(0.55 + Math.random() * 0.4, 4.6), glowMat);
-      ray.position.set(-3.2 + i * 1.6, 0.2, -2.12);
-      ray.rotation.z = (Math.random() - 0.5) * 0.08;
+    for (let i = 0; i < 3; i++) {
+      const ray = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 4.8), glowMat);
+      ray.position.set(-2.4 + i * 2.4, 0.35, -2.1);
+      ray.rotation.z = -0.04 + i * 0.03;
       this.scene.add(ray);
     }
 
@@ -284,17 +285,17 @@ export class TankScene {
     const key = new THREE.DirectionalLight(0xffffff, 1.25);
     key.position.set(3, 6, 4);
     this.scene.add(key);
-    this.scene.add(new THREE.AmbientLight(0x88aacc, 0.7));
+    this.scene.add(new THREE.AmbientLight(0x9ec4dd, 0.85));
 
-    this.fill = new THREE.PointLight(0x7fd3ff, 0.85, 28);
+    this.fill = new THREE.PointLight(0x7fd3ff, 1.05, 32);
     this.fill.position.set(0, 1.8, 2.2);
     this.scene.add(this.fill);
 
-    const top = new THREE.PointLight(0xd8f4ff, 0.55, 24);
+    const top = new THREE.PointLight(0xd8f4ff, 0.7, 28);
     top.position.set(0, 2.4, 0);
     this.scene.add(top);
 
-    const rim = new THREE.DirectionalLight(0xa8e4ff, 0.45);
+    const rim = new THREE.DirectionalLight(0xa8e4ff, 0.55);
     rim.position.set(-4, 2, -2);
     this.scene.add(rim);
 
@@ -355,10 +356,10 @@ export class TankScene {
 
         const scale = FISH_SCALE * f.size * (f.care === 'Down' ? 0.85 : 1);
         root.scale.setScalar(scale);
-        // Spread across the larger tank volume
+        // Spread across the larger tank volume (keep mid-depth so free-fly start frames them)
         const px = f.posX * 1.55;
-        const py = f.care === 'Down' ? -2.15 : f.posY * 1.15 + 0.05;
-        const pz = Math.max(-1.5, f.posZ * 0.95);
+        const py = f.care === 'Down' ? -2.15 : f.posY * 1.05 + 0.15;
+        const pz = Math.min(-0.35, Math.max(-1.55, f.posZ * 0.9 - 0.4));
         root.position.set(px, py, pz);
 
         (root as FishNode).userData = {
