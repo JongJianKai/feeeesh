@@ -41,29 +41,37 @@ import { TankScene } from './tank-scene';
   styles: [
     `
       .fe-visit {
-        position: relative;
-        min-height: 100vh;
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        height: 100dvh;
         overflow: hidden;
-        background: #07262f;
+        overscroll-behavior: none;
+        background: #3fb0d4;
       }
       .fe-visit__tank {
         position: absolute;
         inset: 0;
+        z-index: 0;
       }
       .fe-visit__tank canvas {
         display: block;
         width: 100% !important;
         height: 100% !important;
+        touch-action: none;
       }
       .fe-visit__chrome {
-        position: relative;
+        position: absolute;
+        inset: 0;
         z-index: 2;
         pointer-events: none;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        min-height: 100vh;
         padding: 1.25rem 1.5rem 1.5rem;
+        overflow: hidden;
       }
       .fe-visit__chrome a,
       .fe-visit__chrome button,

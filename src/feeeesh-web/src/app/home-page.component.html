@@ -150,12 +150,12 @@
 }
 
 @if (screen() === 'tank') {
-  <div class="fe-tank">
+  <div class="fe-tank" role="application" aria-label="Feeeesh view tank">
     <div #viewport class="fe-tank__viewport" aria-label="Feeeesh tank"></div>
 
     <div class="fe-tank__hud">
       <header class="fe-tank__top">
-        <button type="button" class="fe-pill fe-pill--ghost" (click)="backToLobby()">← Lobby</button>
+        <button type="button" class="fe-pill fe-pill--ghost fe-tank__back" (click)="backToLobby()">← Lobby</button>
         <div class="fe-wordmark fe-wordmark--sm" aria-label="Feeeesh">
           F<span class="fe-wordmark__accent">eee</span>sh
         </div>
