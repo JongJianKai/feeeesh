@@ -22,7 +22,7 @@ const TANK = {
 };
 
 const MOVE_SPEED = 3.1;
-const FISH_SCALE = 0.52; // slightly smaller than v3 (0.72)
+const FISH_SCALE = 0.46; // slightly smaller than v3 (0.72)
 const glbCache = new Map<string, THREE.Object3D>();
 const gltfLoader = new GLTFLoader();
 
@@ -118,9 +118,9 @@ export class TankScene {
     host.appendChild(this.renderer.domElement);
     host.style.position = host.style.position || 'relative';
 
-    this.camera = new THREE.PerspectiveCamera(72, w / h, 0.05, 120);
-    // Start near the front glass looking into the tank (fish swim ahead).
-    this.camera.position.set(0, 0.15, 1.55);
+    this.camera = new THREE.PerspectiveCamera(68, w / h, 0.05, 120);
+    // Start mid-tank looking toward the far glass so the larger volume reads.
+    this.camera.position.set(0, 0.35, 0.2);
 
     this.controls = new PointerLockControls(this.camera, this.renderer.domElement);
     this.scene.add(this.controls.object);
@@ -286,13 +286,17 @@ export class TankScene {
     this.scene.add(key);
     this.scene.add(new THREE.AmbientLight(0x88aacc, 0.7));
 
-    this.fill = new THREE.PointLight(0x7fd3ff, 0.65, 22);
+    this.fill = new THREE.PointLight(0x7fd3ff, 0.85, 28);
     this.fill.position.set(0, 1.8, 2.2);
     this.scene.add(this.fill);
 
-    const top = new THREE.PointLight(0xd8f4ff, 0.35, 18);
+    const top = new THREE.PointLight(0xd8f4ff, 0.55, 24);
     top.position.set(0, 2.4, 0);
     this.scene.add(top);
+
+    const rim = new THREE.DirectionalLight(0xa8e4ff, 0.45);
+    rim.position.set(-4, 2, -2);
+    this.scene.add(rim);
 
     const bubMat = new THREE.MeshBasicMaterial({ color: 0xd8f4ff, transparent: true, opacity: 0.55 });
     for (let i = 0; i < 40; i++) {
