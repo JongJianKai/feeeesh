@@ -1,4 +1,4 @@
-/* —— Splash 2B: coral → purple pinstripes —— */
+/* —— Splash: coral → purple pinstripes, game-boot feel —— */
 .fe-splash {
   position: fixed;
   inset: 0;
@@ -7,29 +7,59 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.35rem;
-  background:
-    repeating-linear-gradient(
-      -32deg,
-      transparent 0 10px,
-      rgba(20, 8, 36, 0.1) 10px 11px
-    ),
-    linear-gradient(135deg, #ff6b4a 0%, #ff4d7a 38%, #b44ad8 72%, #6b2bb8 100%);
+  gap: 0.85rem;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ff6b4a 0%, #ff4d7a 38%, #b44ad8 72%, #6b2bb8 100%);
+}
+
+.fe-splash__stripes {
+  position: absolute;
+  inset: -20%;
+  background: repeating-linear-gradient(
+    -32deg,
+    transparent 0 11px,
+    rgba(20, 8, 36, 0.12) 11px 12px
+  );
+  animation: fe-stripe-drift 18s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes fe-stripe-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-48px, 28px, 0);
+  }
 }
 
 .fe-splash .fe-wordmark {
-  font-size: clamp(3.4rem, 10vw, 6rem);
+  position: relative;
+  z-index: 1;
+  font-size: clamp(3.8rem, 11vw, 6.6rem);
   transform-origin: center;
 }
 
 .fe-splash .fe-wordmark--enter {
-  animation: fe-splash-wordmark 0.6s ease-out both;
+  animation: fe-splash-wordmark 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fe-splash__tag {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 0.35rem;
+  font: 700 0.95rem/1.2 var(--fe-font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(10, 31, 40, 0.78);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28);
+  animation: fe-fade-up 0.55s ease 0.15s both;
 }
 
 @keyframes fe-splash-wordmark {
   from {
     opacity: 0;
-    transform: rotate(-3deg) scale(0.96);
+    transform: rotate(-3deg) scale(0.9);
   }
   to {
     opacity: 1;
@@ -37,29 +67,59 @@
   }
 }
 
-/* Original pearl orb — not a Poké Ball */
+@keyframes fe-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .fe-splash__ball {
   position: relative;
-  width: 72px;
-  height: 72px;
+  z-index: 1;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
   background:
     radial-gradient(circle at 32% 28%, #ffffff 0%, #d8f4ff 28%, #7fd3ff 58%, #2a7fb0 100%);
   border: 3px solid var(--fe-ink);
   box-shadow:
-    4px 4px 0 var(--fe-ink),
-    inset 0 -10px 0 rgba(10, 31, 40, 0.12);
+    5px 5px 0 var(--fe-ink),
+    inset 0 -12px 0 rgba(10, 31, 40, 0.12);
   animation: fe-ball-bob 2.4s ease-in-out infinite;
+}
+
+.fe-splash__ball-ring {
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 2px solid rgba(244, 251, 255, 0.35);
+  animation: fe-ring-pulse 2.2s ease-out infinite;
+}
+
+@keyframes fe-ring-pulse {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.28);
+    opacity: 0;
+  }
 }
 
 .fe-splash__ball-shine {
   position: absolute;
-  top: 14px;
-  left: 18px;
-  width: 18px;
-  height: 12px;
+  top: 16px;
+  left: 20px;
+  width: 20px;
+  height: 14px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.88);
   transform: rotate(-18deg);
 }
 
@@ -69,22 +129,23 @@
     transform: translateY(0);
   }
   50% {
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
 }
 
 .fe-splash__load {
   position: absolute;
   bottom: 11vh;
+  z-index: 1;
   display: grid;
   gap: 0.45rem;
   justify-items: center;
-  width: min(320px, 78vw);
+  width: min(340px, 78vw);
 }
 
 .fe-splash__load-text {
   margin: 0;
-  font: 800 0.95rem/1.2 var(--fe-font-ui);
+  font: 800 0.98rem/1.2 var(--fe-font-ui);
   color: var(--fe-ink);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
@@ -92,7 +153,7 @@
 .fe-splash__bar {
   position: relative;
   width: 100%;
-  height: 10px;
+  height: 12px;
   border-radius: var(--fe-radius-pill);
   background: rgba(244, 251, 255, 0.92);
   border: 2px solid var(--fe-ink);
@@ -103,7 +164,7 @@
 .fe-splash__bar-fill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: linear-gradient(90deg, #3aa0d8, #57d0e8);
+  background: linear-gradient(90deg, #3aa0d8, #57d0e8 55%, #3ecf8e);
   transition: width 0.2s ease;
 }
 
@@ -117,20 +178,63 @@
 .fe-lobby__bg {
   position: absolute;
   inset: 0;
-  background:
-    url("/assets/feeeesh-lobby-bg-pixel.jpg") center / cover no-repeat;
+  background: url("/assets/feeeesh-lobby-bg-pixel.jpg") center / cover no-repeat;
   image-rendering: pixelated;
-  transform: scale(1.06);
-  filter: saturate(1.28) contrast(1.08) brightness(1.02);
+  transform: scale(1.07);
+  filter: saturate(1.32) contrast(1.1) brightness(1.03);
+  animation: fe-lobby-drift 28s ease-in-out infinite alternate;
+}
+
+@keyframes fe-lobby-drift {
+  from {
+    transform: scale(1.07) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.1) translate3d(-1.2%, 0.6%, 0);
+  }
 }
 
 .fe-lobby__veil {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 65% 50% at 30% 40%, transparent 0%, rgba(5, 24, 32, 0.22) 100%),
-    linear-gradient(180deg, rgba(5, 24, 32, 0.18) 0%, transparent 22%, transparent 70%, rgba(5, 24, 32, 0.42) 100%);
+    radial-gradient(ellipse 65% 50% at 30% 40%, transparent 0%, rgba(5, 24, 32, 0.24) 100%),
+    linear-gradient(180deg, rgba(5, 24, 32, 0.2) 0%, transparent 22%, transparent 68%, rgba(5, 24, 32, 0.48) 100%);
   pointer-events: none;
+}
+
+.fe-lobby__bubbles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.fe-lobby__bubble {
+  position: absolute;
+  bottom: -24px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.7), rgba(180, 230, 255, 0.15) 60%, transparent 70%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  animation-name: fe-lobby-bubble;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  opacity: 0.55;
+}
+
+@keyframes fe-lobby-bubble {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translate3d(18px, -110vh, 0);
+    opacity: 0;
+  }
 }
 
 .fe-lobby__chrome {
@@ -151,6 +255,19 @@
   flex-wrap: wrap;
 }
 
+.fe-lobby__brand {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.fe-lobby__tagline {
+  margin: 0;
+  margin-left: 0.35rem;
+  font: 700 0.88rem/1.2 var(--fe-font-ui);
+  color: rgba(244, 251, 255, 0.82);
+  text-shadow: 1px 1px 0 rgba(10, 31, 40, 0.55);
+}
+
 .fe-lobby__top-right {
   display: flex;
   align-items: center;
@@ -159,19 +276,23 @@
 }
 
 .fe-pill--save {
-  background: linear-gradient(105deg, #3aa0d8 0%, #2a7fb0 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, transparent 45%),
+    linear-gradient(105deg, #3aa0d8 0%, #2a7fb0 100%);
   box-shadow: var(--fe-shadow-hard-sm);
   font-size: 0.9rem;
   padding: 0.65rem 1.1rem;
+  border: 2px solid rgba(255, 255, 255, 0.22);
 }
 
 .fe-lobby__heroes {
   margin-top: clamp(1rem, 8vh, 4rem);
   display: flex;
   flex-wrap: wrap;
-  gap: 0.85rem;
+  gap: 1rem;
   align-items: stretch;
-  max-width: 720px;
+  max-width: 760px;
+  animation: fe-fade-up 0.55s ease 0.08s both;
 }
 
 .fe-hero {
@@ -181,17 +302,17 @@
   align-items: flex-start;
   justify-content: center;
   gap: 0.35rem;
-  min-width: min(280px, 100%);
-  min-height: 96px;
-  padding: 1.1rem 1.5rem 1.15rem 1.35rem;
-  border: 2px solid rgba(255, 255, 255, 0.28);
-  border-radius: 22px;
+  min-width: min(300px, 100%);
+  min-height: 108px;
+  padding: 1.15rem 1.55rem 1.2rem 1.4rem;
+  border: 2px solid rgba(255, 255, 255, 0.32);
+  border-radius: 24px;
   color: var(--fe-pearl);
   cursor: pointer;
   text-align: left;
   overflow: hidden;
-  box-shadow: 4px 5px 0 var(--fe-ink);
-  transition: transform 0.12s ease, filter 0.12s ease;
+  box-shadow: 5px 6px 0 var(--fe-ink);
+  transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease;
   font-family: var(--fe-font-ui);
 }
 
@@ -202,14 +323,47 @@
   background: repeating-linear-gradient(
     -28deg,
     transparent 0 10px,
-    rgba(255, 255, 255, 0.1) 10px 12px
+    rgba(255, 255, 255, 0.11) 10px 12px
   );
   pointer-events: none;
 }
 
+.fe-hero__gloss {
+  position: absolute;
+  inset: 0 auto 45% -30%;
+  width: 55%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  transform: skewX(-18deg);
+  pointer-events: none;
+  z-index: 0;
+  animation: fe-gloss-sweep 4.8s ease-in-out infinite;
+}
+
+@keyframes fe-gloss-sweep {
+  0%,
+  55% {
+    transform: translateX(0) skewX(-18deg);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    transform: translateX(220%) skewX(-18deg);
+    opacity: 0;
+  }
+}
+
 .fe-hero:hover:not(:disabled) {
-  transform: translateY(-2px);
-  filter: brightness(1.06);
+  transform: translateY(-3px);
+  filter: brightness(1.07);
+  box-shadow: 6px 8px 0 var(--fe-ink);
+}
+
+.fe-hero:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 3px 3px 0 var(--fe-ink);
 }
 
 .fe-hero:disabled {
@@ -218,34 +372,48 @@
 }
 
 .fe-hero--primary {
-  /* Continue-slot craft */
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.26) 0%, transparent 42%),
     linear-gradient(115deg, var(--fe-coral) 0%, var(--fe-coral-deep) 55%, #ff9a6b 100%);
-  flex: 1.15 1 280px;
+  flex: 1.15 1 300px;
 }
 
 .fe-hero--secondary {
-  /* Crystal-slot craft */
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, transparent 42%),
     linear-gradient(115deg, #57d0e8 0%, #1f8fad 52%, #3ec7e0 100%);
-  flex: 1 1 240px;
+  flex: 1 1 250px;
+}
+
+.fe-hero--pulse {
+  animation: fe-hero-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes fe-hero-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+    box-shadow: 5px 6px 0 var(--fe-ink);
+  }
+  50% {
+    filter: brightness(1.1);
+    box-shadow: 5px 6px 0 var(--fe-ink), 0 0 0 4px rgba(87, 208, 232, 0.28);
+  }
 }
 
 .fe-hero--compact {
-  min-height: 64px;
-  min-width: 200px;
-  padding: 0.75rem 1.15rem;
+  min-height: 68px;
+  min-width: 210px;
+  padding: 0.8rem 1.2rem;
   border-radius: 18px;
 }
 
 .fe-hero__icon {
   position: relative;
   z-index: 1;
-  width: 1.35rem;
-  height: 0.85rem;
-  margin-bottom: 0.1rem;
+  width: 1.45rem;
+  height: 0.9rem;
+  margin-bottom: 0.12rem;
   display: inline-block;
   filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.35));
 }
@@ -257,8 +425,8 @@
 }
 
 .fe-hero__icon--spark {
-  width: 1rem;
-  height: 1rem;
+  width: 1.05rem;
+  height: 1.05rem;
   background: var(--fe-pearl);
   clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
 }
@@ -266,7 +434,7 @@
 .fe-hero__label {
   position: relative;
   z-index: 1;
-  font: 900 1.45rem/1.05 var(--fe-font-display);
+  font: 800 1.55rem/1.05 var(--fe-font-display);
   letter-spacing: 0.01em;
   text-shadow: 2px 2px 0 rgba(10, 31, 40, 0.45);
 }
@@ -274,8 +442,8 @@
 .fe-hero__sub {
   position: relative;
   z-index: 1;
-  font: 700 0.8rem/1.2 var(--fe-font-ui);
-  color: rgba(244, 251, 255, 0.88);
+  font: 700 0.82rem/1.2 var(--fe-font-ui);
+  color: rgba(244, 251, 255, 0.9);
 }
 
 .fe-lobby__bottom {
@@ -436,6 +604,90 @@
   gap: 0.65rem;
 }
 
-.fe-tank__hint-space {
-  height: 2.5rem;
+/* —— Summon rarity flash —— */
+.fe-rarity {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 20, 28, 0.35);
+  pointer-events: none;
+  animation: fe-rarity-veil 2.2s ease both;
+}
+
+.fe-rarity__card {
+  min-width: min(320px, 86vw);
+  padding: 1.35rem 1.6rem 1.4rem;
+  border-radius: 22px;
+  border: 3px solid var(--fe-ink);
+  text-align: center;
+  box-shadow: 6px 6px 0 var(--fe-ink);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, transparent 40%),
+    linear-gradient(135deg, #57d0e8, #1f8fad);
+  animation: fe-rarity-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fe-rarity--rare .fe-rarity__card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, transparent 40%),
+    linear-gradient(135deg, #7fd3ff, #3a7fd8);
+}
+
+.fe-rarity--legend .fe-rarity__card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, transparent 40%),
+    linear-gradient(135deg, #ffd166, #ff7a59 70%, #b44ad8);
+}
+
+.fe-rarity--uncommon .fe-rarity__card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, transparent 40%),
+    linear-gradient(135deg, #3ecf8e, #1f8f6a);
+}
+
+.fe-rarity__tier {
+  margin: 0;
+  font: 800 0.78rem/1 var(--fe-font-ui);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(10, 31, 40, 0.75);
+}
+
+.fe-rarity__name {
+  margin: 0.45rem 0 0.25rem;
+  font: 800 1.7rem/1.1 var(--fe-font-display);
+  color: var(--fe-pearl);
+  text-shadow: 2px 2px 0 rgba(10, 31, 40, 0.45);
+}
+
+.fe-rarity__hint {
+  margin: 0;
+  font: 700 0.82rem/1.2 var(--fe-font-ui);
+  color: rgba(244, 251, 255, 0.88);
+}
+
+@keyframes fe-rarity-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.86) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fe-rarity-veil {
+  0% {
+    opacity: 0;
+  }
+  12%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
