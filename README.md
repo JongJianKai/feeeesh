@@ -37,9 +37,9 @@ npm start
 - Email register/login + vanity slug claim
 - Splash 2B (coral→purple pinstripes, pearl orb, Loading Feeeesh...)
 - Lobby 3A (View Tank + Summon Fish glossy heroes on strong pixel BG)
-- View Tank free-fly: WASD + pointer-lock; Space up / Ctrl down; clip inside glass
+- View Tank free-fly: WASD look-swim (pitch + W/S for vertical; no Space/Ctrl) + pointer-lock; larger tank; denser voxel glTF fish; lobby pixel BG stays on lobby only
 - Public `/t/{slug}` uses the same free camera
-- 3 AI-backed glTF fish under `src/feeeesh-web/public/assets/fish/*.glb` (non-monetized; no Pokémon IP)
+- 3 AI-backed denser glTF fish under `src/feeeesh-web/public/assets/fish/*.glb` (non-monetized; no Pokémon IP)
 
 ## Not included yet
 
