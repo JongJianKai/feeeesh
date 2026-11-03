@@ -120,16 +120,16 @@
   background:
     url("/assets/feeeesh-lobby-bg-pixel.jpg") center / cover no-repeat;
   image-rendering: pixelated;
-  transform: scale(1.04);
-  filter: saturate(1.15) contrast(1.05);
+  transform: scale(1.06);
+  filter: saturate(1.28) contrast(1.08) brightness(1.02);
 }
 
 .fe-lobby__veil {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 70% 55% at 28% 42%, transparent 0%, rgba(5, 24, 32, 0.28) 100%),
-    linear-gradient(180deg, rgba(5, 24, 32, 0.2) 0%, transparent 26%, transparent 68%, rgba(5, 24, 32, 0.5) 100%);
+    radial-gradient(ellipse 65% 50% at 30% 40%, transparent 0%, rgba(5, 24, 32, 0.22) 100%),
+    linear-gradient(180deg, rgba(5, 24, 32, 0.18) 0%, transparent 22%, transparent 70%, rgba(5, 24, 32, 0.42) 100%);
   pointer-events: none;
 }
 
