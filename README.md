@@ -9,7 +9,7 @@ Product decisions: Project store `docs/fish-tank-game-concept.md` · free-fly pl
 | Layer | Choice |
 | --- | --- |
 | Web | Angular 19 + Three.js (PointerLock free-fly + glTF voxel fish) |
-| API | ASP.NET Core 9 |
+| API | ASP.NET Core 8 (`net8.0`; works with SDK 8.0.203+) |
 | DB (local demo) | SQLite (`feeeesh.dev.db`) |
 | Prod target | Azure + PostgreSQL (swap connection string later) |
 

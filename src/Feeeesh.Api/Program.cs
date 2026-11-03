@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=feeeesh.dev.db"));
 
@@ -36,9 +35,6 @@ using (var scope = app.Services.CreateScope())
         db.SaveChanges();
     }
 }
-
-if (app.Environment.IsDevelopment())
-    app.MapOpenApi();
 
 app.UseCors("web");
 app.MapControllers();
