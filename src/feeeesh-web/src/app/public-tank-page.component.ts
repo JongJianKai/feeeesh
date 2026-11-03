@@ -80,6 +80,7 @@ import { TankScene } from './tank-scene';
       }
       .fe-visit__top .fe-wordmark {
         text-decoration: none;
+        font-size: clamp(2rem, 4vw, 2.8rem);
       }
       .fe-visit__bottom {
         display: grid;

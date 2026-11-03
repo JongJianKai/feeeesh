@@ -19,7 +19,7 @@
   --fe-radius-panel: 16px;
   --fe-blur: 12px;
 
-  --fe-font-display: "Nunito", "Trebuchet MS", sans-serif;
+  --fe-font-display: "Fredoka", "Nunito", "Trebuchet MS", sans-serif;
   --fe-font-ui: "Nunito", system-ui, sans-serif;
 
   --fe-shadow-hard: 4px 4px 0 var(--fe-ink);
@@ -46,15 +46,15 @@ input {
 
 .fe-wordmark {
   font-family: var(--fe-font-display);
-  font-weight: 900;
-  font-size: clamp(2.5rem, 6vw, 4.5rem);
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  font-size: clamp(2.6rem, 6.2vw, 4.7rem);
+  letter-spacing: 0.01em;
   line-height: 1;
   color: var(--fe-pearl);
-  -webkit-text-stroke: 3px var(--fe-ink);
+  -webkit-text-stroke: 3.5px var(--fe-ink);
   paint-order: stroke fill;
   text-shadow:
-    4px 4px 0 var(--fe-ink),
+    5px 5px 0 var(--fe-ink),
     0 0 0 var(--fe-ink);
   margin: 0;
 }
@@ -70,20 +70,20 @@ input {
 }
 
 .fe-wordmark--enter {
-  animation: fe-wordmark-enter 0.55s ease-out both;
+  animation: fe-wordmark-enter 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes fe-wordmark-enter {
   from {
     opacity: 0;
-    transform: rotate(-3deg) scale(0.96);
+    transform: rotate(-3deg) scale(0.94);
     text-shadow: 2px 2px 0 var(--fe-ink);
   }
   to {
     opacity: 1;
     transform: rotate(-3deg) scale(1);
     text-shadow:
-      4px 4px 0 var(--fe-ink),
+      5px 5px 0 var(--fe-ink),
       0 0 0 var(--fe-ink);
   }
 }
@@ -173,8 +173,8 @@ input {
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.45rem 0.85rem;
-  font: 600 0.82rem/1.2 var(--fe-font-ui);
+  padding: 0.5rem 0.95rem;
+  font: 700 0.84rem/1.2 var(--fe-font-ui);
   color: var(--fe-muted);
   border-radius: var(--fe-radius-pill);
   background: var(--fe-glass);
@@ -182,6 +182,7 @@ input {
   backdrop-filter: blur(var(--fe-blur));
   -webkit-backdrop-filter: blur(var(--fe-blur));
   white-space: nowrap;
+  box-shadow: 1px 1px 0 rgba(10, 31, 40, 0.25);
 }
 
 .fe-status-chip span + span::before {

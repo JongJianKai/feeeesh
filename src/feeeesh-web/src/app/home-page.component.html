@@ -1,9 +1,12 @@
 @if (screen() === 'splash') {
   <div class="fe-splash" role="status" aria-live="polite">
+    <div class="fe-splash__stripes" aria-hidden="true"></div>
     <h1 class="fe-wordmark fe-wordmark--tilt fe-wordmark--enter" aria-label="Feeeesh">
       F<span class="fe-wordmark__accent">eee</span>sh
     </h1>
+    <p class="fe-splash__tag">cozy collectible aquarium</p>
     <div class="fe-splash__ball" aria-hidden="true">
+      <span class="fe-splash__ball-ring"></span>
       <span class="fe-splash__ball-shine"></span>
     </div>
     <div class="fe-splash__load">
@@ -19,12 +22,27 @@
   <div class="fe-lobby">
     <div class="fe-lobby__bg" aria-hidden="true"></div>
     <div class="fe-lobby__veil" aria-hidden="true"></div>
+    <div class="fe-lobby__bubbles" aria-hidden="true">
+      @for (b of lobbyBubbles; track b.id) {
+        <span
+          class="fe-lobby__bubble"
+          [style.left.%]="b.x"
+          [style.animationDuration.s]="b.dur"
+          [style.animationDelay.s]="b.delay"
+          [style.width.px]="b.size"
+          [style.height.px]="b.size"
+        ></span>
+      }
+    </div>
 
     <div class="fe-lobby__chrome">
       <header class="fe-lobby__top">
-        <h1 class="fe-wordmark fe-wordmark--tilt fe-wordmark--enter" aria-label="Feeeesh">
-          F<span class="fe-wordmark__accent">eee</span>sh
-        </h1>
+        <div class="fe-lobby__brand">
+          <h1 class="fe-wordmark fe-wordmark--tilt fe-wordmark--enter" aria-label="Feeeesh">
+            F<span class="fe-wordmark__accent">eee</span>sh
+          </h1>
+          <p class="fe-lobby__tagline">Your pixel aquarium awaits</p>
+        </div>
 
         <div class="fe-lobby__top-right">
           @if (me(); as m) {
@@ -33,7 +51,11 @@
               <span>{{ m.pearls }} Pearls</span>
               <span>{{ m.tank.occupied }}/{{ m.tank.capacity }} fish</span>
             </div>
-            <button type="button" class="fe-pill fe-pill--save" (click)="showAuth = !showAuth; showMore = true">
+            <button
+              type="button"
+              class="fe-pill fe-pill--save"
+              (click)="feAudio.unlock(); showAuth = !showAuth; showMore = true"
+            >
               {{ m.isGuest ? 'Save to account' : 'Account' }}
             </button>
           }
@@ -42,17 +64,20 @@
 
       <div class="fe-lobby__heroes">
         <button type="button" class="fe-hero fe-hero--primary" (click)="openTank()">
+          <span class="fe-hero__gloss" aria-hidden="true"></span>
           <span class="fe-hero__icon fe-hero__icon--fish" aria-hidden="true"></span>
           <span class="fe-hero__label">View Tank</span>
-          <span class="fe-hero__sub">Watch your aquarium</span>
+          <span class="fe-hero__sub">Swim through your aquarium</span>
         </button>
 
         <button
           type="button"
           class="fe-hero fe-hero--secondary"
+          [class.fe-hero--pulse]="me()?.dailyClaimAvailable"
           [disabled]="busy()"
           (click)="summon()"
         >
+          <span class="fe-hero__gloss" aria-hidden="true"></span>
           <span class="fe-hero__icon fe-hero__icon--spark" aria-hidden="true"></span>
           <span class="fe-hero__label">Summon Fish</span>
           <span class="fe-hero__sub">{{ summonLabel() }}</span>
@@ -60,7 +85,7 @@
       </div>
 
       <div class="fe-lobby__bottom">
-        <button type="button" class="fe-pill fe-pill--ghost" (click)="showMore = !showMore">
+        <button type="button" class="fe-pill fe-pill--ghost" (click)="showMore = !showMore; feAudio.play('ui')">
           {{ showMore ? 'Close' : 'More' }}
         </button>
         @if (me(); as m) {
@@ -143,7 +168,14 @@
       </header>
 
       <div class="fe-tank__bottom">
-        <button type="button" class="fe-hero fe-hero--secondary fe-hero--compact" [disabled]="busy()" (click)="summon()">
+        <button
+          type="button"
+          class="fe-hero fe-hero--secondary fe-hero--compact"
+          [class.fe-hero--pulse]="me()?.dailyClaimAvailable"
+          [disabled]="busy()"
+          (click)="summon()"
+        >
+          <span class="fe-hero__gloss" aria-hidden="true"></span>
           <span class="fe-hero__label">Summon Fish</span>
           <span class="fe-hero__sub">{{ summonLabel() }}</span>
         </button>
@@ -157,6 +189,24 @@
           <p class="fe-toast" [class.fe-toast--error]="!!error()">{{ error() ?? status() }}</p>
         }
       </div>
+    </div>
+  </div>
+}
+
+@if (summonFlash(); as flash) {
+  <div
+    class="fe-rarity"
+    [class.fe-rarity--common]="flash.tier === 'common'"
+    [class.fe-rarity--uncommon]="flash.tier === 'uncommon'"
+    [class.fe-rarity--rare]="flash.tier === 'rare'"
+    [class.fe-rarity--legend]="flash.tier === 'legend'"
+    role="status"
+    aria-live="polite"
+  >
+    <div class="fe-rarity__card">
+      <p class="fe-rarity__tier">{{ flash.rarity }}</p>
+      <p class="fe-rarity__name">{{ flash.name }}</p>
+      <p class="fe-rarity__hint">New fish joined your tank</p>
     </div>
   </div>
 }
