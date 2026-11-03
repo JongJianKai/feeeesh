@@ -32,7 +32,6 @@ const TANK = {
 const MOVE_SPEED = 5.4;
 const FISH_SCALE = 0.48;
 const WATER = 0x5ec8e8;
-const WATER_DEEP = 0x2a9ec4;
 const glbCache = new Map<string, THREE.Object3D>();
 const gltfLoader = new GLTFLoader();
 
@@ -232,14 +231,14 @@ export class TankScene {
     this.renderer.setClearColor(WATER, 1);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.55;
+    this.renderer.toneMappingExposure = 1.42;
     host.appendChild(this.renderer.domElement);
     host.style.position = host.style.position || 'relative';
 
-    this.camera = new THREE.PerspectiveCamera(72, w / h, 0.08, 220);
-    // Start mid-arena looking out over open water + reef
-    this.camera.position.set(0, 0.4, 6.5);
-    this.camera.lookAt(0, -0.6, -4);
+    this.camera = new THREE.PerspectiveCamera(74, w / h, 0.08, 260);
+    // Start elevated, looking out across open reef — no near walls in frame
+    this.camera.position.set(-1.2, 1.6, 9.5);
+    this.camera.lookAt(2.5, -1.2, -6);
 
     this.controls = new PointerLockControls(this.camera, this.renderer.domElement);
     this.scene.add(this.controls.object);
@@ -248,7 +247,7 @@ export class TankScene {
     this.controls.addEventListener('lock', this.onLock);
     this.controls.addEventListener('unlock', this.onUnlock);
 
-    this.scene.fog = new THREE.FogExp2(WATER, 0.012);
+    this.scene.fog = new THREE.FogExp2(WATER, 0.0095);
     this.scene.background = new THREE.Color(WATER);
     this.buildArena();
     this.scene.add(this.decorGroup);
@@ -378,7 +377,7 @@ export class TankScene {
   private buildArena() {
     // Distant horizon dome — open world fade, never a glass box
     const sky = new THREE.Mesh(
-      new THREE.SphereGeometry(90, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.55),
+      new THREE.SphereGeometry(110, 48, 24, 0, Math.PI * 2, 0, Math.PI * 0.58),
       new THREE.MeshBasicMaterial({
         map: this.horizonTex,
         side: THREE.BackSide,
@@ -386,47 +385,37 @@ export class TankScene {
         depthWrite: false
       })
     );
-    sky.position.y = -8;
+    sky.position.y = -12;
     this.scene.add(sky);
 
-    // Soft water volume (subtle, no hard edges)
-    const waterShell = new THREE.Mesh(
-      new THREE.SphereGeometry(70, 24, 16),
-      new THREE.MeshBasicMaterial({
-        color: WATER_DEEP,
-        transparent: true,
-        opacity: 0.08,
-        side: THREE.BackSide,
-        depthWrite: false
-      })
-    );
-    this.scene.add(waterShell);
-
-    // Rolling sand bed — large open floor
+    // Rolling sand bed — large open floor (warm, not chalk white)
     const sandMat = new THREE.MeshStandardMaterial({
-      color: 0xe8d5a8,
-      roughness: 0.95,
+      color: 0xc9a86e,
+      roughness: 0.92,
       flatShading: true,
-      emissive: new THREE.Color(0xc9a86a),
-      emissiveIntensity: 0.08
+      emissive: new THREE.Color(0x8a6a3a),
+      emissiveIntensity: 0.12
     });
-    const sand = new THREE.Mesh(new THREE.BoxGeometry(48, 0.35, 42), sandMat);
-    sand.position.set(0, -4.7, -2);
+    const sand = new THREE.Mesh(new THREE.BoxGeometry(56, 0.4, 48), sandMat);
+    sand.position.set(0, -4.75, -2);
     this.scene.add(sand);
 
-    // Gentle dunes / seabed height variation
+    // Soft seabed mounds — low profile so they read as terrain, not walls
     const duneMat = new THREE.MeshStandardMaterial({
-      color: 0xd4bf8a,
-      roughness: 1,
-      flatShading: true
+      color: 0xb8955c,
+      roughness: 0.95,
+      flatShading: true,
+      emissive: new THREE.Color(0x6e5228),
+      emissiveIntensity: 0.06
     });
     const dunes: Array<[number, number, number, number, number, number]> = [
-      [-10, -4.35, -6, 8, 0.55, 6],
-      [12, -4.4, -8, 9, 0.45, 7],
-      [-6, -4.45, 4, 6, 0.35, 5],
-      [8, -4.42, 5, 7, 0.4, 5.5],
-      [0, -4.48, -12, 14, 0.3, 5],
-      [-14, -4.38, 2, 5, 0.5, 4]
+      [-12, -4.55, -7, 10, 0.28, 7],
+      [14, -4.58, -9, 11, 0.24, 8],
+      [-7, -4.6, 5, 7, 0.2, 6],
+      [9, -4.58, 6, 8, 0.22, 6.5],
+      [1, -4.62, -14, 16, 0.18, 6],
+      [-16, -4.56, 3, 6, 0.26, 5],
+      [16, -4.57, 4, 6, 0.24, 5]
     ];
     for (const [x, y, z, sx, sy, sz] of dunes) {
       const d = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), duneMat);
@@ -467,22 +456,22 @@ export class TankScene {
     this.scene.add(caustic2);
     this.caustic2 = caustic2;
 
-    // God rays from surface
+    // Soft god rays — angled, distant, never read as tank walls
     const rayMat = new THREE.MeshBasicMaterial({
-      color: 0xe8fbff,
+      color: 0xf2fcff,
       transparent: true,
-      opacity: 0.07,
+      opacity: 0.055,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide
     });
-    for (let i = 0; i < 9; i++) {
-      const w = 1.6 + (i % 3) * 0.55;
-      const ray = new THREE.Mesh(new THREE.PlaneGeometry(w, 14), rayMat.clone());
-      ray.position.set(-14 + i * 3.5, 1.2, -4 + (i % 2) * 3);
-      ray.rotation.z = -0.12 + (i % 4) * 0.04;
-      ray.rotation.y = 0.15;
-      ray.userData['phase'] = i * 0.7;
+    for (let i = 0; i < 7; i++) {
+      const w = 2.2 + (i % 3) * 0.7;
+      const ray = new THREE.Mesh(new THREE.PlaneGeometry(w, 18), rayMat.clone());
+      ray.position.set(-16 + i * 5.2, 2.4, -8 + (i % 3) * 2.5);
+      ray.rotation.z = -0.18 + i * 0.035;
+      ray.rotation.y = 0.35 + i * 0.04;
+      ray.userData['phase'] = i * 0.85;
       this.godRayGroup.add(ray);
     }
 
