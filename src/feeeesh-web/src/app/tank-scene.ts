@@ -17,20 +17,22 @@ type FishNode = THREE.Object3D & {
 };
 
 /**
- * Inner glass volume — camera stays inside this AABB.
- * v5: same large swim space as v4, richer lighting / particles / decor.
+ * Soft swim bounds — large open arena, not a glass aquarium.
+ * Soft edges fade into bright water fog instead of walls.
  */
 const TANK = {
-  minX: -4.4,
-  maxX: 4.4,
-  minY: -2.35,
-  maxY: 2.35,
-  minZ: -1.9,
-  maxZ: 1.9
+  minX: -18,
+  maxX: 18,
+  minY: -4.2,
+  maxY: 5.5,
+  minZ: -16,
+  maxZ: 14
 };
 
-const MOVE_SPEED = 3.2;
-const FISH_SCALE = 0.52;
+const MOVE_SPEED = 5.4;
+const FISH_SCALE = 0.48;
+const WATER = 0x5ec8e8;
+const WATER_DEEP = 0x2a9ec4;
 const glbCache = new Map<string, THREE.Object3D>();
 const gltfLoader = new GLTFLoader();
 
@@ -75,16 +77,16 @@ function makeFallbackFish(colorHex: string, accentHex: string): THREE.Group {
   const g = new THREE.Group();
   const body = new THREE.Mesh(
     new THREE.BoxGeometry(0.9, 0.45, 0.35),
-    new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.55, flatShading: true })
+    new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.45, flatShading: true })
   );
   const accent = new THREE.Mesh(
     new THREE.BoxGeometry(0.35, 0.35, 0.3),
-    new THREE.MeshStandardMaterial({ color: accentHex, roughness: 0.55, flatShading: true })
+    new THREE.MeshStandardMaterial({ color: accentHex, roughness: 0.45, flatShading: true })
   );
   accent.position.x = 0.4;
   const tail = new THREE.Mesh(
     new THREE.BoxGeometry(0.22, 0.4, 0.08),
-    new THREE.MeshStandardMaterial({ color: accentHex, roughness: 0.55, flatShading: true })
+    new THREE.MeshStandardMaterial({ color: accentHex, roughness: 0.45, flatShading: true })
   );
   tail.position.x = -0.55;
   g.add(body, accent, tail);
@@ -97,15 +99,15 @@ function makeBubbleTexture(): THREE.CanvasTexture {
   c.height = 64;
   const g = c.getContext('2d')!;
   const grd = g.createRadialGradient(28, 26, 4, 32, 32, 28);
-  grd.addColorStop(0, 'rgba(255,255,255,0.95)');
-  grd.addColorStop(0.35, 'rgba(200,240,255,0.55)');
-  grd.addColorStop(0.75, 'rgba(140,210,235,0.18)');
-  grd.addColorStop(1, 'rgba(140,210,235,0)');
+  grd.addColorStop(0, 'rgba(255,255,255,0.98)');
+  grd.addColorStop(0.35, 'rgba(220,248,255,0.65)');
+  grd.addColorStop(0.75, 'rgba(170,230,250,0.2)');
+  grd.addColorStop(1, 'rgba(170,230,250,0)');
   g.fillStyle = grd;
   g.beginPath();
   g.arc(32, 32, 28, 0, Math.PI * 2);
   g.fill();
-  g.fillStyle = 'rgba(255,255,255,0.75)';
+  g.fillStyle = 'rgba(255,255,255,0.85)';
   g.beginPath();
   g.ellipse(22, 20, 8, 5, -0.5, 0, Math.PI * 2);
   g.fill();
@@ -117,27 +119,76 @@ function makeBubbleTexture(): THREE.CanvasTexture {
 
 function makeCausticTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas');
-  c.width = 256;
-  c.height = 256;
+  c.width = 512;
+  c.height = 512;
   const g = c.getContext('2d')!;
   g.fillStyle = '#000';
-  g.fillRect(0, 0, 256, 256);
-  for (let i = 0; i < 48; i++) {
-    const x = Math.random() * 256;
-    const y = Math.random() * 256;
-    const r = 8 + Math.random() * 28;
+  g.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 90; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
+    const r = 12 + Math.random() * 48;
     const grd = g.createRadialGradient(x, y, 0, x, y, r);
-    grd.addColorStop(0, 'rgba(180,240,255,0.55)');
+    grd.addColorStop(0, 'rgba(255,255,255,0.7)');
+    grd.addColorStop(0.45, 'rgba(200,245,255,0.35)');
     grd.addColorStop(1, 'rgba(180,240,255,0)');
     g.fillStyle = grd;
     g.beginPath();
     g.arc(x, y, r, 0, Math.PI * 2);
     g.fill();
   }
+  // Soft intersecting ribbons
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 18; i++) {
+    const y0 = Math.random() * 512;
+    g.strokeStyle = `rgba(210,245,255,${0.08 + Math.random() * 0.12})`;
+    g.lineWidth = 6 + Math.random() * 14;
+    g.beginPath();
+    g.moveTo(0, y0);
+    for (let x = 0; x <= 512; x += 64) {
+      g.quadraticCurveTo(x + 32, y0 + Math.sin(x * 0.02 + i) * 40, x + 64, y0 + Math.sin((x + 64) * 0.02 + i) * 28);
+    }
+    g.stroke();
+  }
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(2.2, 1.4);
+  tex.repeat.set(3.4, 3.0);
   return tex;
+}
+
+/** Soft distant haze dome — open world, no glass edges. */
+function makeHorizonTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 4;
+  c.height = 256;
+  const g = c.getContext('2d')!;
+  const grd = g.createLinearGradient(0, 0, 0, 256);
+  grd.addColorStop(0, '#c8f2ff');
+  grd.addColorStop(0.35, '#7ed4f0');
+  grd.addColorStop(0.7, '#3fb0d4');
+  grd.addColorStop(1, '#1f88ae');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 4, 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearFilter;
+  return tex;
+}
+
+function makeMoteTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 32;
+  c.height = 32;
+  const g = c.getContext('2d')!;
+  const grd = g.createRadialGradient(16, 16, 0, 16, 16, 14);
+  grd.addColorStop(0, 'rgba(255,255,255,0.95)');
+  grd.addColorStop(0.4, 'rgba(255,240,180,0.55)');
+  grd.addColorStop(1, 'rgba(255,240,180,0)');
+  g.fillStyle = grd;
+  g.beginPath();
+  g.arc(16, 16, 14, 0, Math.PI * 2);
+  g.fill();
+  return new THREE.CanvasTexture(c);
 }
 
 export class TankScene {
@@ -149,15 +200,21 @@ export class TankScene {
   private bubbleGroup = new THREE.Group();
   private sparkGroup = new THREE.Group();
   private decorGroup = new THREE.Group();
+  private moteGroup = new THREE.Group();
+  private godRayGroup = new THREE.Group();
   private raf = 0;
   private disposed = false;
   private clock = new THREE.Clock();
   private fill?: THREE.PointLight;
+  private sun?: THREE.DirectionalLight;
   private caustic?: THREE.Mesh;
+  private caustic2?: THREE.Mesh;
   private causticTex?: THREE.CanvasTexture;
   private keys = new Set<string>();
   private hintEl?: HTMLDivElement;
   private bubbleTex = makeBubbleTexture();
+  private moteTex = makeMoteTexture();
+  private horizonTex = makeHorizonTexture();
   private onKeyDown = (e: KeyboardEvent) => {
     this.keys.add(e.code);
     if (['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) {
@@ -172,17 +229,17 @@ export class TankScene {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(w, h);
-    this.renderer.setClearColor(0x0a3d4e, 1);
+    this.renderer.setClearColor(WATER, 1);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.18;
+    this.renderer.toneMappingExposure = 1.55;
     host.appendChild(this.renderer.domElement);
     host.style.position = host.style.position || 'relative';
 
-    this.camera = new THREE.PerspectiveCamera(68, w / h, 0.05, 120);
-    // Frame mid-tank: fish + decor + bubbles visible without pointer-lock first.
-    this.camera.position.set(0, -0.35, 1.35);
-    this.camera.lookAt(0, -0.55, -0.6);
+    this.camera = new THREE.PerspectiveCamera(72, w / h, 0.08, 220);
+    // Start mid-arena looking out over open water + reef
+    this.camera.position.set(0, 0.4, 6.5);
+    this.camera.lookAt(0, -0.6, -4);
 
     this.controls = new PointerLockControls(this.camera, this.renderer.domElement);
     this.scene.add(this.controls.object);
@@ -191,13 +248,15 @@ export class TankScene {
     this.controls.addEventListener('lock', this.onLock);
     this.controls.addEventListener('unlock', this.onUnlock);
 
-    this.scene.fog = new THREE.FogExp2(0x0a3d4e, 0.022);
-    this.scene.background = new THREE.Color(0x0a3d4e);
-    this.buildTank();
+    this.scene.fog = new THREE.FogExp2(WATER, 0.012);
+    this.scene.background = new THREE.Color(WATER);
+    this.buildArena();
     this.scene.add(this.decorGroup);
     this.scene.add(this.fishGroup);
     this.scene.add(this.bubbleGroup);
     this.scene.add(this.sparkGroup);
+    this.scene.add(this.moteGroup);
+    this.scene.add(this.godRayGroup);
     this.mountHint();
     this.loop();
 
@@ -221,18 +280,18 @@ export class TankScene {
   private mountHint() {
     const el = document.createElement('div');
     el.className = 'fe-tank-hint';
-    el.textContent = 'Click tank to look · WASD swim (look up/down to rise/dive) · Esc unlock';
+    el.textContent = 'Click to look · WASD swim (look up/down to rise/dive) · Esc unlock';
     Object.assign(el.style, {
       position: 'absolute',
       left: '50%',
-      bottom: '5.5rem',
+      bottom: '5.75rem',
       transform: 'translateX(-50%)',
       zIndex: '3',
       padding: '0.5rem 1rem',
       borderRadius: '999px',
-      background: 'rgba(8, 32, 40, 0.68)',
-      border: '1px solid rgba(244, 251, 255, 0.2)',
-      color: 'rgba(244, 251, 255, 0.9)',
+      background: 'rgba(8, 40, 52, 0.55)',
+      border: '1px solid rgba(244, 251, 255, 0.22)',
+      color: 'rgba(244, 251, 255, 0.92)',
       font: '700 0.8rem/1.2 Fredoka, Nunito, system-ui, sans-serif',
       pointerEvents: 'none',
       transition: 'opacity 0.25s ease',
@@ -241,7 +300,7 @@ export class TankScene {
       overflow: 'hidden',
       textOverflow: 'ellipsis',
       letterSpacing: '0.01em',
-      boxShadow: '2px 2px 0 rgba(10, 31, 40, 0.45)'
+      boxShadow: '2px 2px 0 rgba(10, 31, 40, 0.4)'
     } as CSSStyleDeclaration);
     this.host.appendChild(el);
     this.hintEl = el;
@@ -249,117 +308,151 @@ export class TankScene {
 
   private addVoxelPlant(x: number, z: number, h: number, hue: number) {
     const stem = new THREE.Mesh(
-      new THREE.BoxGeometry(0.1, h, 0.1),
-      new THREE.MeshStandardMaterial({ color: hue, flatShading: true, roughness: 0.7 })
+      new THREE.BoxGeometry(0.12, h, 0.12),
+      new THREE.MeshStandardMaterial({
+        color: hue,
+        flatShading: true,
+        roughness: 0.55,
+        emissive: new THREE.Color(hue).multiplyScalar(0.15),
+        emissiveIntensity: 0.35
+      })
     );
-    stem.position.set(x, -2.55 + h / 2, z);
+    stem.position.set(x, -4.55 + h / 2, z);
     this.decorGroup.add(stem);
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       const leaf = new THREE.Mesh(
-        new THREE.BoxGeometry(0.28, 0.1, 0.06),
+        new THREE.BoxGeometry(0.34, 0.12, 0.07),
         new THREE.MeshStandardMaterial({
-          color: new THREE.Color(hue).offsetHSL(0, 0, 0.08 + i * 0.04),
+          color: new THREE.Color(hue).offsetHSL(0, 0.05, 0.1 + i * 0.04),
           flatShading: true,
-          roughness: 0.65
+          roughness: 0.5,
+          emissive: new THREE.Color(hue).multiplyScalar(0.1),
+          emissiveIntensity: 0.25
         })
       );
-      leaf.position.set(x + (i % 2 ? 0.12 : -0.12), -2.55 + h * (0.35 + i * 0.2), z);
+      leaf.position.set(x + (i % 2 ? 0.14 : -0.14), -4.55 + h * (0.28 + i * 0.18), z);
       leaf.rotation.z = (i % 2 ? 1 : -1) * (0.35 + i * 0.1);
       this.decorGroup.add(leaf);
     }
   }
 
-  private addCoralCluster(x: number, z: number, baseColor: number) {
+  private addCoralCluster(x: number, z: number, baseColor: number, scale = 1) {
     const mats = [
-      new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.65, flatShading: true, emissive: baseColor, emissiveIntensity: 0.08 }),
       new THREE.MeshStandardMaterial({
-        color: new THREE.Color(baseColor).offsetHSL(0.02, 0, 0.12),
-        roughness: 0.65,
-        flatShading: true
+        color: baseColor,
+        roughness: 0.5,
+        flatShading: true,
+        emissive: baseColor,
+        emissiveIntensity: 0.22
+      }),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(baseColor).offsetHSL(0.02, 0.05, 0.14),
+        roughness: 0.5,
+        flatShading: true,
+        emissive: new THREE.Color(baseColor).offsetHSL(0.02, 0, 0.1),
+        emissiveIntensity: 0.12
       })
     ];
     const sizes: Array<[number, number, number, number, number, number]> = [
-      [0, 0.35, 0, 0.38, 0.7, 0.38],
-      [0.22, 0.55, 0.05, 0.18, 0.55, 0.18],
-      [-0.2, 0.48, -0.08, 0.16, 0.48, 0.16],
-      [0.08, 0.72, -0.12, 0.14, 0.35, 0.14]
+      [0, 0.42, 0, 0.42, 0.84, 0.42],
+      [0.26, 0.62, 0.06, 0.2, 0.62, 0.2],
+      [-0.24, 0.55, -0.1, 0.18, 0.55, 0.18],
+      [0.1, 0.82, -0.14, 0.16, 0.4, 0.16],
+      [0.05, 0.28, 0.22, 0.22, 0.35, 0.22]
     ];
     for (let i = 0; i < sizes.length; i++) {
       const [ox, oy, oz, sx, sy, sz] = sizes[i];
-      const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mats[i % mats.length]);
-      m.position.set(x + ox, -2.55 + oy, z + oz);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(sx * scale, sy * scale, sz * scale), mats[i % mats.length]);
+      m.position.set(x + ox * scale, -4.55 + oy * scale, z + oz * scale);
       this.decorGroup.add(m);
     }
   }
 
-  private buildTank() {
-    const water = new THREE.Mesh(
-      new THREE.BoxGeometry(9.6, 5.4, 4.4),
-      new THREE.MeshStandardMaterial({
-        color: 0x1a6b8a,
+  private addRock(x: number, y: number, z: number, sx: number, sy: number, sz: number, mat: THREE.Material) {
+    const rock = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mat);
+    rock.position.set(x, y, z);
+    rock.rotation.y = (x * 0.3 + z * 0.17) % Math.PI;
+    this.decorGroup.add(rock);
+  }
+
+  private buildArena() {
+    // Distant horizon dome — open world fade, never a glass box
+    const sky = new THREE.Mesh(
+      new THREE.SphereGeometry(90, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.55),
+      new THREE.MeshBasicMaterial({
+        map: this.horizonTex,
+        side: THREE.BackSide,
+        fog: false,
+        depthWrite: false
+      })
+    );
+    sky.position.y = -8;
+    this.scene.add(sky);
+
+    // Soft water volume (subtle, no hard edges)
+    const waterShell = new THREE.Mesh(
+      new THREE.SphereGeometry(70, 24, 16),
+      new THREE.MeshBasicMaterial({
+        color: WATER_DEEP,
         transparent: true,
         opacity: 0.08,
-        roughness: 0.25,
-        metalness: 0.08,
-        side: THREE.BackSide
+        side: THREE.BackSide,
+        depthWrite: false
       })
     );
-    this.scene.add(water);
+    this.scene.add(waterShell);
 
-    const edges = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(9.7, 5.5, 4.5)),
-      new THREE.LineBasicMaterial({ color: 0xd8f4ff, transparent: true, opacity: 0.65 })
-    );
-    this.scene.add(edges);
-
-    // Solid aqua back wall — never the lobby photo.
-    const backWall = new THREE.Mesh(
-      new THREE.PlaneGeometry(9.4, 5.2),
-      new THREE.MeshStandardMaterial({
-        color: 0x156a82,
-        roughness: 0.92,
-        metalness: 0.02,
-        emissive: new THREE.Color(0x0c4558),
-        emissiveIntensity: 0.55
-      })
-    );
-    backWall.position.set(0, 0, -2.15);
-    this.scene.add(backWall);
-
-    // Soft god-ray wash
-    const glowMat = new THREE.MeshBasicMaterial({
-      color: 0xb8ecff,
-      transparent: true,
-      opacity: 0.055,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending
+    // Rolling sand bed — large open floor
+    const sandMat = new THREE.MeshStandardMaterial({
+      color: 0xe8d5a8,
+      roughness: 0.95,
+      flatShading: true,
+      emissive: new THREE.Color(0xc9a86a),
+      emissiveIntensity: 0.08
     });
-    for (let i = 0; i < 5; i++) {
-      const ray = new THREE.Mesh(new THREE.PlaneGeometry(1.35 + (i % 2) * 0.4, 5.0), glowMat);
-      ray.position.set(-3.2 + i * 1.55, 0.45, -2.08);
-      ray.rotation.z = -0.08 + i * 0.035;
-      this.scene.add(ray);
-    }
-
-    // Sand with subtle banding
-    const sand = new THREE.Mesh(
-      new THREE.BoxGeometry(9.2, 0.22, 4.0),
-      new THREE.MeshStandardMaterial({ color: 0xd2be96, roughness: 1, flatShading: true })
-    );
-    sand.position.y = -2.55;
+    const sand = new THREE.Mesh(new THREE.BoxGeometry(48, 0.35, 42), sandMat);
+    sand.position.set(0, -4.7, -2);
     this.scene.add(sand);
 
-    const sandRipple = new THREE.Mesh(
-      new THREE.BoxGeometry(8.6, 0.04, 3.4),
-      new THREE.MeshStandardMaterial({ color: 0xc0aa7e, roughness: 1, flatShading: true })
-    );
-    sandRipple.position.set(0, -2.42, 0.15);
-    this.scene.add(sandRipple);
+    // Gentle dunes / seabed height variation
+    const duneMat = new THREE.MeshStandardMaterial({
+      color: 0xd4bf8a,
+      roughness: 1,
+      flatShading: true
+    });
+    const dunes: Array<[number, number, number, number, number, number]> = [
+      [-10, -4.35, -6, 8, 0.55, 6],
+      [12, -4.4, -8, 9, 0.45, 7],
+      [-6, -4.45, 4, 6, 0.35, 5],
+      [8, -4.42, 5, 7, 0.4, 5.5],
+      [0, -4.48, -12, 14, 0.3, 5],
+      [-14, -4.38, 2, 5, 0.5, 4]
+    ];
+    for (const [x, y, z, sx, sy, sz] of dunes) {
+      const d = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), duneMat);
+      d.position.set(x, y, z);
+      this.scene.add(d);
+    }
 
-    // Caustic light plane on the sand
+    // Bright caustics across the open bed
     this.causticTex = makeCausticTexture();
     this.caustic = new THREE.Mesh(
-      new THREE.PlaneGeometry(8.8, 3.6),
+      new THREE.PlaneGeometry(44, 38),
+      new THREE.MeshBasicMaterial({
+        map: this.causticTex,
+        transparent: true,
+        opacity: 0.42,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      })
+    );
+    this.caustic.rotation.x = -Math.PI / 2;
+    this.caustic.position.set(0, -4.4, -1);
+    this.scene.add(this.caustic);
+
+    // Second drifting caustic layer
+    const caustic2 = new THREE.Mesh(
+      new THREE.PlaneGeometry(40, 34),
       new THREE.MeshBasicMaterial({
         map: this.causticTex,
         transparent: true,
@@ -368,79 +461,175 @@ export class TankScene {
         blending: THREE.AdditiveBlending
       })
     );
-    this.caustic.rotation.x = -Math.PI / 2;
-    this.caustic.position.set(0, -2.38, 0);
-    this.scene.add(this.caustic);
+    caustic2.rotation.x = -Math.PI / 2;
+    caustic2.rotation.z = 0.4;
+    caustic2.position.set(2, -4.35, 1);
+    this.scene.add(caustic2);
+    this.caustic2 = caustic2;
 
-    const rockMat = new THREE.MeshStandardMaterial({ color: 0x6b7c85, roughness: 0.9, flatShading: true });
-    const rockMat2 = new THREE.MeshStandardMaterial({ color: 0x556670, roughness: 0.92, flatShading: true });
-    const rocks: Array<[number, number, number, number, number, number, THREE.Material]> = [
-      [-3.2, -2.15, -0.6, 1.1, 0.7, 0.8, rockMat],
-      [-2.4, -2.25, 0.4, 0.7, 0.45, 0.55, rockMat2],
-      [3.0, -2.1, -0.8, 1.0, 0.75, 0.7, rockMat],
-      [2.2, -2.2, 0.55, 0.55, 0.4, 0.5, rockMat2],
-      [0.2, -2.3, -1.2, 0.8, 0.35, 0.6, rockMat],
-      [-0.8, -2.28, 0.9, 0.5, 0.32, 0.42, rockMat2],
-      [1.4, -2.32, 1.0, 0.45, 0.28, 0.38, rockMat]
-    ];
-    for (const [x, y, z, sx, sy, sz, mat] of rocks) {
-      const rock = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mat);
-      rock.position.set(x, y, z);
-      this.decorGroup.add(rock);
+    // God rays from surface
+    const rayMat = new THREE.MeshBasicMaterial({
+      color: 0xe8fbff,
+      transparent: true,
+      opacity: 0.07,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide
+    });
+    for (let i = 0; i < 9; i++) {
+      const w = 1.6 + (i % 3) * 0.55;
+      const ray = new THREE.Mesh(new THREE.PlaneGeometry(w, 14), rayMat.clone());
+      ray.position.set(-14 + i * 3.5, 1.2, -4 + (i % 2) * 3);
+      ray.rotation.z = -0.12 + (i % 4) * 0.04;
+      ray.rotation.y = 0.15;
+      ray.userData['phase'] = i * 0.7;
+      this.godRayGroup.add(ray);
     }
 
-    this.addVoxelPlant(3.4, 0.3, 1.7, 0x3aa76d);
-    this.addVoxelPlant(3.65, -0.35, 1.35, 0x2f8f5c);
-    this.addVoxelPlant(-3.5, 0.45, 1.8, 0x48b87a);
-    this.addVoxelPlant(-3.75, -0.25, 1.4, 0x2f8f5c);
-    this.addVoxelPlant(1.15, -1.05, 1.15, 0x3aa76d);
-    this.addVoxelPlant(-1.35, -1.15, 1.25, 0x2f9a68);
-    this.addVoxelPlant(0.4, 1.15, 0.95, 0x48b87a);
+    const rockMat = new THREE.MeshStandardMaterial({
+      color: 0x7a8e98,
+      roughness: 0.85,
+      flatShading: true,
+      emissive: 0x2a3a44,
+      emissiveIntensity: 0.15
+    });
+    const rockMat2 = new THREE.MeshStandardMaterial({
+      color: 0x627480,
+      roughness: 0.88,
+      flatShading: true
+    });
+    const rocks: Array<[number, number, number, number, number, number, THREE.Material]> = [
+      [-8.5, -3.9, -4, 2.4, 1.4, 1.8, rockMat],
+      [-6.2, -4.1, -2.2, 1.4, 0.9, 1.2, rockMat2],
+      [9.5, -3.85, -5.5, 2.2, 1.5, 1.6, rockMat],
+      [7.2, -4.05, -3, 1.2, 0.85, 1.1, rockMat2],
+      [1.5, -4.15, -9, 1.8, 0.7, 1.4, rockMat],
+      [-12, -3.95, 1, 1.6, 1.2, 1.3, rockMat2],
+      [13, -4.0, 2, 1.5, 1.1, 1.2, rockMat],
+      [-3, -4.2, 6, 1.3, 0.65, 1.1, rockMat2],
+      [4.5, -4.15, 7.5, 1.1, 0.7, 0.95, rockMat],
+      [-15, -4.0, -6, 1.8, 1.0, 1.4, rockMat],
+      [0.5, -4.25, -1.5, 0.9, 0.45, 0.7, rockMat2]
+    ];
+    for (const [x, y, z, sx, sy, sz, mat] of rocks) {
+      this.addRock(x, y, z, sx, sy, sz, mat);
+    }
 
-    this.addCoralCluster(1.85, -0.85, 0xff7a59);
-    this.addCoralCluster(2.25, -0.55, 0xff9a6b);
-    this.addCoralCluster(-1.95, -0.8, 0xff8a70);
-    this.addCoralCluster(-0.55, -1.25, 0xff6b4a);
-    this.addCoralCluster(0.9, 0.75, 0xffb08a);
+    // Reef belts — spread wide for open-arena silhouette
+    const plantSpots: Array<[number, number, number, number]> = [
+      [10.5, -3.2, 2.2, 0x3ecf8e],
+      [11.2, -4.5, 1.7, 0x2faf6a],
+      [9.8, -2.8, 1.9, 0x48d898],
+      [-10.8, -2.5, 2.3, 0x3ecf8e],
+      [-11.5, -4.0, 1.85, 0x2faf6a],
+      [-9.5, 3.2, 1.6, 0x48d898],
+      [3.5, -8, 1.4, 0x3ecf8e],
+      [-4.2, -7.5, 1.55, 0x2faf6a],
+      [6.5, 5.5, 1.35, 0x48d898],
+      [-6.8, 6.2, 1.45, 0x3ecf8e],
+      [14, 0.5, 1.9, 0x2faf6a],
+      [-14.5, -1, 2.0, 0x48d898],
+      [1.2, 8.5, 1.25, 0x3ecf8e],
+      [-2.5, -10, 1.5, 0x2faf6a],
+      [8, -9, 1.7, 0x48d898]
+    ];
+    for (const [x, z, h, hue] of plantSpots) {
+      this.addVoxelPlant(x, z, h, hue);
+    }
 
-    const key = new THREE.DirectionalLight(0xfff6e8, 1.35);
-    key.position.set(3.5, 6.5, 4.5);
-    this.scene.add(key);
-    this.scene.add(new THREE.AmbientLight(0x9ec4dd, 0.78));
+    const corals: Array<[number, number, number, number?]> = [
+      [5.5, -5.5, 0xff7a59, 1.15],
+      [6.8, -4.2, 0xff9a6b, 0.9],
+      [-5.8, -5.2, 0xff8a70, 1.1],
+      [-7.2, -3.8, 0xff6b4a, 0.85],
+      [2.2, 4.5, 0xffb08a, 1],
+      [-2.8, 5.2, 0xff7a59, 0.95],
+      [11, 3, 0xff9a6b, 1.05],
+      [-11.5, 4, 0xff8a70, 1.1],
+      [0.5, -11, 0xff6b4a, 1.2],
+      [8.5, 7, 0xffb08a, 0.8],
+      [-8, -8.5, 0xff7a59, 0.9],
+      [14.5, -3, 0xff9a6b, 1]
+    ];
+    for (const [x, z, color, scale] of corals) {
+      this.addCoralCluster(x, z, color, scale ?? 1);
+    }
 
-    this.fill = new THREE.PointLight(0x7fd3ff, 1.2, 36);
-    this.fill.position.set(0, 1.9, 2.0);
+    // Bright open-water lighting
+    this.sun = new THREE.DirectionalLight(0xfff8ee, 2.05);
+    this.sun.position.set(8, 22, 12);
+    this.scene.add(this.sun);
+
+    this.scene.add(new THREE.AmbientLight(0xb8e4f5, 1.05));
+    this.scene.add(new THREE.HemisphereLight(0xd8f6ff, 0x3a8aaa, 0.85));
+
+    this.fill = new THREE.PointLight(0x9ee8ff, 1.65, 55);
+    this.fill.position.set(0, 3.5, 4);
     this.scene.add(this.fill);
 
-    const top = new THREE.PointLight(0xe8f8ff, 0.85, 30);
-    top.position.set(0, 2.5, 0.2);
+    const top = new THREE.PointLight(0xf2fbff, 1.25, 48);
+    top.position.set(0, 6.5, -2);
     this.scene.add(top);
 
-    const rim = new THREE.DirectionalLight(0xa8e4ff, 0.7);
-    rim.position.set(-4.5, 2.2, -2.5);
+    const rim = new THREE.DirectionalLight(0xa8e8ff, 1.05);
+    rim.position.set(-12, 6, -8);
     this.scene.add(rim);
 
-    const warm = new THREE.PointLight(0xffb08a, 0.35, 18);
-    warm.position.set(2.5, -1.2, 0.5);
+    const warm = new THREE.PointLight(0xffc49a, 0.7, 28);
+    warm.position.set(6, -2, 2);
     this.scene.add(warm);
 
+    const warm2 = new THREE.PointLight(0xffd0a8, 0.45, 24);
+    warm2.position.set(-7, -2.5, -3);
+    this.scene.add(warm2);
+
+    // Bubbles across the larger volume
     const bubMat = new THREE.SpriteMaterial({
       map: this.bubbleTex,
       transparent: true,
       depthWrite: false,
-      opacity: 0.85
+      opacity: 0.9
     });
-    for (let i = 0; i < 56; i++) {
+    for (let i = 0; i < 110; i++) {
       const b = new THREE.Sprite(bubMat.clone());
-      const s = 0.06 + Math.random() * 0.14;
+      const s = 0.07 + Math.random() * 0.18;
       b.scale.set(s, s, 1);
-      b.position.set((Math.random() - 0.5) * 8.2, -2.2 + Math.random() * 4.4, (Math.random() - 0.5) * 3.4);
+      b.position.set(
+        (Math.random() - 0.5) * 36,
+        -4.2 + Math.random() * 9,
+        (Math.random() - 0.5) * 30
+      );
       b.userData = {
-        speed: 0.2 + Math.random() * 0.38,
+        speed: 0.28 + Math.random() * 0.55,
         phase: Math.random() * Math.PI * 2,
-        wobble: 0.35 + Math.random() * 0.8
+        wobble: 0.4 + Math.random() * 1.1
       };
       this.bubbleGroup.add(b);
+    }
+
+    // Floating light motes (PokéBonk-style sparkle life)
+    const moteMat = new THREE.SpriteMaterial({
+      map: this.moteTex,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      opacity: 0.75
+    });
+    for (let i = 0; i < 48; i++) {
+      const m = new THREE.Sprite(moteMat.clone());
+      const s = 0.08 + Math.random() * 0.16;
+      m.scale.set(s, s, 1);
+      m.position.set(
+        (Math.random() - 0.5) * 32,
+        -3 + Math.random() * 7,
+        (Math.random() - 0.5) * 26
+      );
+      m.userData = {
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.15 + Math.random() * 0.35,
+        amp: 0.25 + Math.random() * 0.55
+      };
+      this.moteGroup.add(m);
     }
   }
 
@@ -457,7 +646,7 @@ export class TankScene {
     const r = rarity.toLowerCase();
     const color =
       r.includes('legend') ? 0xffd166 : r.includes('rare') ? 0x7fd3ff : r.includes('uncommon') ? 0x3ecf8e : 0xf4fbff;
-    const count = r.includes('legend') ? 22 : r.includes('rare') ? 14 : 8;
+    const count = r.includes('legend') ? 26 : r.includes('rare') ? 16 : 10;
     const mat = new THREE.SpriteMaterial({
       map: this.bubbleTex,
       color,
@@ -467,14 +656,14 @@ export class TankScene {
     });
     for (let i = 0; i < count; i++) {
       const s = new THREE.Sprite(mat.clone());
-      const size = 0.08 + Math.random() * 0.12;
+      const size = 0.1 + Math.random() * 0.14;
       s.scale.set(size, size, 1);
       s.position.copy(at);
       s.userData = {
-        vx: (Math.random() - 0.5) * 1.4,
-        vy: 0.4 + Math.random() * 1.2,
-        vz: (Math.random() - 0.5) * 1.4,
-        life: 0.9 + Math.random() * 0.5
+        vx: (Math.random() - 0.5) * 1.8,
+        vy: 0.5 + Math.random() * 1.4,
+        vz: (Math.random() - 0.5) * 1.8,
+        life: 0.9 + Math.random() * 0.55
       };
       this.sparkGroup.add(s);
     }
@@ -496,7 +685,7 @@ export class TankScene {
 
     const inTank = fish.filter((x) => x.inTank);
     await Promise.all(
-      inTank.map(async (f) => {
+      inTank.map(async (f, idx) => {
         let root: THREE.Object3D;
         try {
           root = await loadGlb(glbUrlForSpecies(f.speciesId));
@@ -511,10 +700,10 @@ export class TankScene {
           for (const raw of mats) {
             const mat = raw as THREE.MeshStandardMaterial;
             if ('color' in mat && mat.color) {
-              mat.emissive = mat.color.clone().multiplyScalar(0.12);
-              mat.emissiveIntensity = 0.5;
-              mat.roughness = 0.5;
-              mat.metalness = 0.05;
+              mat.emissive = mat.color.clone().multiplyScalar(0.18);
+              mat.emissiveIntensity = 0.65;
+              mat.roughness = 0.42;
+              mat.metalness = 0.06;
               mat.flatShading = true;
             }
             if ('opacity' in mat) {
@@ -528,15 +717,22 @@ export class TankScene {
         const rarityBoost = /legend/i.test(f.rarity) ? 1.12 : /rare/i.test(f.rarity) ? 1.06 : 1;
         const scale = FISH_SCALE * f.size * rarityBoost * (f.care === 'Down' ? 0.85 : 1);
         root.scale.setScalar(scale);
-        const px = f.posX * 1.35;
-        const py = f.care === 'Down' ? -2.15 : f.posY * 0.85 - 0.15;
-        const pz = Math.min(-0.15, Math.max(-1.35, f.posZ * 0.75 - 0.2));
-        root.position.set(px, py, pz);
+
+        // Spread fish across the larger arena (API pos is still ~[-1,1])
+        const ring = (idx % 5) * 1.1;
+        const px = f.posX * 5.5 + Math.sin(idx * 1.7) * ring;
+        const py = f.care === 'Down' ? -4.1 : f.posY * 2.2 + 0.15;
+        const pz = f.posZ * 4.5 - 1.5 + Math.cos(idx * 1.3) * ring;
+        root.position.set(
+          THREE.MathUtils.clamp(px, TANK.minX + 1, TANK.maxX - 1),
+          THREE.MathUtils.clamp(py, TANK.minY + 0.4, TANK.maxY - 0.6),
+          THREE.MathUtils.clamp(pz, TANK.minZ + 1, TANK.maxZ - 1)
+        );
 
         (root as FishNode).userData = {
           fishId: f.id,
           phase: Math.random() * Math.PI * 2,
-          speed: 0.32 + Math.random() * 0.45,
+          speed: 0.28 + Math.random() * 0.42,
           base: root.position.clone(),
           care: f.care,
           rarity: f.rarity,
@@ -588,12 +784,25 @@ export class TankScene {
     this.raf = requestAnimationFrame(this.loop);
     const dt = Math.min(0.05, this.clock.getDelta());
     const t = this.clock.elapsedTime;
-    if (this.fill) this.fill.intensity = 1.05 + Math.sin(t * 1.35) * 0.18;
+    if (this.fill) this.fill.intensity = 1.45 + Math.sin(t * 1.2) * 0.28;
+    if (this.sun) this.sun.intensity = 1.95 + Math.sin(t * 0.35) * 0.12;
 
     if (this.caustic && this.causticTex) {
-      this.causticTex.offset.x = Math.sin(t * 0.12) * 0.08;
-      this.causticTex.offset.y = t * 0.035;
-      (this.caustic.material as THREE.MeshBasicMaterial).opacity = 0.16 + Math.sin(t * 0.9) * 0.06;
+      this.causticTex.offset.x = Math.sin(t * 0.15) * 0.1;
+      this.causticTex.offset.y = t * 0.045;
+      (this.caustic.material as THREE.MeshBasicMaterial).opacity = 0.34 + Math.sin(t * 0.85) * 0.1;
+    }
+    if (this.caustic2 && this.causticTex) {
+      const mat = this.caustic2.material as THREE.MeshBasicMaterial;
+      mat.opacity = 0.16 + Math.sin(t * 0.7 + 1.2) * 0.06;
+      this.caustic2.rotation.z = 0.4 + Math.sin(t * 0.08) * 0.05;
+    }
+
+    for (const ray of this.godRayGroup.children) {
+      const m = ray as THREE.Mesh;
+      const mat = m.material as THREE.MeshBasicMaterial;
+      const phase = (m.userData['phase'] as number) ?? 0;
+      mat.opacity = 0.045 + Math.sin(t * 0.6 + phase) * 0.028;
     }
 
     this.updateMovement(dt);
@@ -602,8 +811,17 @@ export class TankScene {
       const b = child as THREE.Sprite;
       const { speed, phase, wobble } = b.userData as { speed: number; phase: number; wobble: number };
       b.position.y += speed * dt;
-      b.position.x += Math.sin(t * wobble + phase) * 0.004;
-      if (b.position.y > 2.45) b.position.y = -2.4;
+      b.position.x += Math.sin(t * wobble + phase) * 0.006;
+      if (b.position.y > 5.8) b.position.y = -4.2;
+    }
+
+    for (const child of this.moteGroup.children) {
+      const m = child as THREE.Sprite;
+      const { phase, speed, amp } = m.userData as { phase: number; speed: number; amp: number };
+      m.position.y += Math.sin(t * speed + phase) * 0.004;
+      m.position.x += Math.cos(t * speed * 0.7 + phase) * 0.003 * amp;
+      const mat = m.material as THREE.SpriteMaterial;
+      mat.opacity = 0.45 + Math.sin(t * 2 + phase) * 0.3;
     }
 
     for (let i = this.sparkGroup.children.length - 1; i >= 0; i--) {
@@ -627,13 +845,13 @@ export class TankScene {
       const node = child as FishNode;
       if (node.userData.care === 'Down') continue;
       const { phase, speed, base, flashUntil } = node.userData;
-      const amp = node.userData.care === 'NeedsCare' ? 0.28 : 0.55;
+      const amp = node.userData.care === 'NeedsCare' ? 0.45 : 0.95;
       node.position.x = base.x + Math.sin(t * speed + phase) * amp;
-      node.position.y = base.y + Math.sin(t * speed * 1.3 + phase) * 0.18;
-      node.position.z = base.z + Math.cos(t * speed * 0.7 + phase) * 0.14;
+      node.position.y = base.y + Math.sin(t * speed * 1.25 + phase) * 0.32;
+      node.position.z = base.z + Math.cos(t * speed * 0.65 + phase) * 0.55;
       const dx = Math.cos(t * speed + phase);
       node.rotation.y = dx > 0 ? 0 : Math.PI;
-      node.rotation.z = Math.sin(t * speed * 2 + phase) * 0.08;
+      node.rotation.z = Math.sin(t * speed * 2 + phase) * 0.1;
 
       if (flashUntil > t) {
         const pulse = 0.55 + Math.sin(t * 14) * 0.45;
@@ -643,7 +861,7 @@ export class TankScene {
           const mats = Array.isArray(m.material) ? m.material : [m.material];
           for (const raw of mats) {
             const mat = raw as THREE.MeshStandardMaterial;
-            if (mat.emissiveIntensity !== undefined) mat.emissiveIntensity = 0.5 + pulse * 1.4;
+            if (mat.emissiveIntensity !== undefined) mat.emissiveIntensity = 0.65 + pulse * 1.5;
           }
         });
       }
@@ -654,8 +872,8 @@ export class TankScene {
       if ((child as THREE.Mesh).geometry instanceof THREE.BoxGeometry) {
         const g = (child as THREE.Mesh).geometry as THREE.BoxGeometry;
         const p = g.parameters;
-        if (p.height > 1.0 && p.width < 0.2) {
-          child.rotation.z = Math.sin(t * 0.9 + child.position.x) * 0.06;
+        if (p.height > 1.0 && p.width < 0.25) {
+          child.rotation.z = Math.sin(t * 0.85 + child.position.x) * 0.08;
         }
       }
     }
@@ -688,6 +906,8 @@ export class TankScene {
     this.controls.dispose();
     this.hintEl?.remove();
     this.bubbleTex.dispose();
+    this.moteTex.dispose();
+    this.horizonTex.dispose();
     this.causticTex?.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
